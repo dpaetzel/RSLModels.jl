@@ -333,7 +333,7 @@ end
 Computes the mean of the subsethood degrees of the two intervals with respect to
 each other.
 """
-function subsethood_mean(interval1, interval2)
+function subsethood_mean(interval1::Interval, interval2::Interval)
     ssh1 = subsethood(interval1, interval2)
     ssh2 = subsethood(interval2, interval1)
     return (ssh1 + ssh2) / 2.0
@@ -359,6 +359,74 @@ function similarities_pairwise(intervals1, intervals2; simf=subsethood_mean)
         end
     end
     similarity
+end
+
+
+function idx_mapping(intervals1, intervals2; simf=subsethood_mean)
+    sims_pairwise = similarities_pairwise(intervals1, intervals2; simf=simf)
+    idx_mapping(sims_pairwise)
+end
+
+
+function idx_mapping(sims_pairwise)
+    argmax(sims_pairwise, dims=2), argmax(sims_pairwise, dims=1)
+end
+
+
+"""
+The two unidirectional mappings (with respect to the similarity metric given as
+`simf`) between the two sets of intervals.
+"""
+function mappings(intervals1::Vector{Interval}, intervals2::Vector{Interval}; simf=subsethood_mean)
+    idx1to2, idx2to1 = idx_mapping(intervals1, intervals2; simf=simf)
+    mappings(idx1to2, idx2to1)
+end
+
+
+"""
+Transforms the two cartesian indices into dictionaries.
+"""
+function mappings(idx1to2::Matrix{CartesianIndex{2}}, idx2to1::Matrix{CartesianIndex{2}})
+    dict1to2 = Dict(Tuple.(idx1to2))
+    # We have to “transpose” the second index before creating the dictionary
+    # because here, the second dimension is iterated over in `idx_mapping`.
+    dict2to1 = Dict(k => v for (v, k) in Tuple.(idx2to1))
+    dict1to2, dict2to1
+end
+
+
+function similarities(intervals1, intervals2; simf=subsethood_mean)
+    sims_pairwise = similarities_pairwise(intervals1, intervals2; simf=simf)
+    similarities(sims_pairwise)
+end
+
+
+function similarities(sims_pairwise)
+    idx1to2, idx2to1 = idx_mapping(sims_pairwise)
+    sum(sims_pairwise[idx1to2]), sum(sims_pairwise[idx2to1])
+end
+
+
+function similarity(intervals1, intervals2; simf=subsethood_mean)
+    sum(similarities(intervals1, intervals2, simf=simf))
+end
+
+
+function similarity(sims_pairwise)
+    sum(similarities(sims_pairwise))
+end
+
+
+function similarity_max(intervals1, intervals2; simf=subsethood_mean)
+    if simf == subsethood_mean
+        # The maximum similarity between two intervals is 1.0. Since we compare
+        # all pairwise (in both directions), we simply have to sum the sizes of
+        # the sets of intervals.
+        length(intervals1) + length(intervals2)
+    else
+        throw(ArgumentError(
+            "similarity_max unsupported for the similarity function provided"))
+    end
 end
 
 
@@ -406,13 +474,12 @@ function plot_mapping(intervals1, intervals2)
     # same for the transposed array to get for each interval in `intervals2` the
     # closest interval in `intervals1`.
     sims_pairwise = similarities_pairwise(intervals1, intervals2)
-    idx1to2 = argmax(sims_pairwise, dims=2)
-    idx2to1 = argmax(sims_pairwise', dims=2)
+    idx1to2, idx2to1 = idx_mapping(sims_pairwise)
+    idx1to2, idx2to1 = mappings(idx1to2, idx2to1)
 
 
-    # Transform to dictionaries.
-    idx1to2 = Dict(Tuple.(idx1to2))
-    idx2to1 = Dict(Tuple.(idx2to1))
+    sims = similarities(sims_pairwise)
+    sim = similarity(sims_pairwise)
 
 
     # The number of colors used corresponds to the larger number of intervals.
@@ -424,10 +491,16 @@ function plot_mapping(intervals1, intervals2)
 
     # Initialize the figure.
     fig, ax = plt.subplots(2, 2, layout="constrained", figsize=(10,5))
-    ax[1,1].set_title("Intervals in first set")
-    ax[1,2].set_title("Most similar intervals in second set")
-    ax[2,1].set_title("Intervals in second set")
-    ax[2,2].set_title("Most similar intervals in first set")
+    fig.suptitle("Mapping between intervals\n" *
+        "(overall similarity score: $(round(sim, digits=2)); " *
+        "theoretical maximum in this case: " *
+        "$(similarity_max(intervals1, intervals2)))")
+    ax[1,1].set_title("Intervals in first set ($(length(intervals1)))")
+    ax[1,2].set_title("Most similar intervals in second set\n" *
+        "(overall score in this direction: $(round(sims[1], digits=2)))")
+    ax[2,1].set_title("Intervals in second set ($(length(intervals2)))")
+    ax[2,2].set_title("Most similar intervals in first set\n" *
+        "(overall score in this direction: $(round(sims[2], digits=2)))")
 
 
     # Compute which interval (indices) aren't mapped to.
@@ -473,4 +546,9 @@ intervals1 = draw_intervals(2, 5, 0.05; spread_max=0.2)
 intervals2 = draw_intervals(2, 4, 0.05; spread_max=0.2)
 
 
-plot_mapping(intervals1, intervals2)
+# plot_mapping(intervals1, intervals2)
+
+
+# TODO Consider to enforce that each interval is sampled k times
+# TODO Include distance
+# TODO Add training data points
