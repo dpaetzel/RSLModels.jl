@@ -12,13 +12,11 @@ export Interval, draw_intervals, match, plot_interval
 # `includet(thisfile.jl)`.
 __revise_mode__ = :evalassign
 
+const X_MIN::Float64 = 0.0
+const X_MAX::Float64 = 1.0
 
-X_MIN = 0.0
-X_MAX = 1.0
-
-
-dist_spread = Beta(1.55, 2.74)
-
+# TODO Consider to move this global constant somewhere
+const dist_spread = Beta(1.55, 2.74)
 
 # TODO Consider to represent empty arrays properly instead of `nothing`
 struct Interval
