@@ -1,9 +1,12 @@
+module Intervals
+
 using Distributions
 using LinearAlgebra
 using PyPlot
 using Random
 using StatsBase
 
+export Interval, draw_intervals, match, plot_interval
 
 # We want to track global assignments as well when doing
 # `includet(thisfile.jl)`.
@@ -541,14 +544,4 @@ function plot_mapping(intervals1, intervals2)
     end
 end
 
-
-intervals1 = draw_intervals(2, 5, 0.05; spread_max=0.2)
-intervals2 = draw_intervals(2, 4, 0.05; spread_max=0.2)
-
-
-# plot_mapping(intervals1, intervals2)
-
-
-# TODO Consider to enforce that each interval is sampled k times
-# TODO Include distance
-# TODO Add training data points
+end
