@@ -2,10 +2,9 @@ module Tasks
 
 using Random
 
-include("Models.jl")
-using .Models
+using ..Models
 
-export Task, generate, save, load
+export Task, dimensions, generate, save, load
 
 const X_MIN::Float64 = Models.X_MIN
 const X_MAX::Float64 = Models.X_MAX
@@ -17,6 +16,10 @@ struct Task
     y::AbstractVector
     X_test::AbstractMatrix
     y_test::AbstractVector
+end
+
+function dimensions(task::Task)
+    return Models.dimensions(task.model)
 end
 
 function generate(

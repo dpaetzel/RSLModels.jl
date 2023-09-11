@@ -38,12 +38,28 @@ function output(rng::AbstractRNG, model::ConstantModel)
     return model.coef + rand(rng, model.dist_noise)
 end
 
+"""
+Assumes that all the given models are responsible (i.e. mixes all of them; i.e.
+an all-ones matching matrix).
+"""
 function output(models::AbstractVector{ConstantModel})
     return output(Random.default_rng(), models)
 end
 
+function output(
+    models::AbstractVector{ConstantModel},
+    matching_matrix::AbstractMatrix,
+)
+    return output(
+        Random.default_rng(),
+        models;
+        matching_matrix=matching_matrix,
+    )
+end
+
 """
-Assumes that all the given models are responsible (i.e. mixes all of them).
+Assumes that all the given models are responsible (i.e. mixes all of them; i.e.
+an all-ones matching matrix).
 """
 function output(rng::AbstractRNG, models::AbstractVector{ConstantModel})
     outs = map(model -> output(rng, model), models)
@@ -52,13 +68,9 @@ function output(rng::AbstractRNG, models::AbstractVector{ConstantModel})
     return vec(sum(mixing .* outs))
 end
 
-function output(models::AbstractVector{ConstantModel}; matching_matrix::AbstractMatrix)
-    return output(Random.default_rng(), models; matching_matrix=matching_matrix)
-end
-
 function output(
     rng::AbstractRNG,
-    models::AbstractVector{ConstantModel};
+    models::AbstractVector{ConstantModel},
     matching_matrix::AbstractMatrix,
 )
     outs = map(model -> output(rng, model), models)

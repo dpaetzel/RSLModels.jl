@@ -3,11 +3,8 @@ module Models
 using Random
 using Distributions
 
-include("Intervals.jl")
-using .Intervals
-
-include("LocalModels.jl")
-using .LocalModels
+using ..Intervals
+using ..LocalModels
 
 export Model, dimensions, draw_model, match, draw_data
 
@@ -114,7 +111,7 @@ function draw_data(rng::AbstractRNG, model::Model, n)
         x_max=model.x_max,
     )
     matching_matrix = match(model, X)
-    y = output(rng, model.local_models; matching_matrix=matching_matrix)
+    y = output(rng, model.local_models, matching_matrix)
 
     return X, y
 end
