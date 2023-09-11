@@ -54,7 +54,7 @@ end
 # cleanly right now (i.e. without having to do `unsigned(10)` or `0xa` or
 # similar).
 function draw_spreads(
-    dimensions::Integer,
+    dims::Integer,
     spread_min;
     spread_max=Inf,
     x_min=X_MIN,
@@ -62,7 +62,7 @@ function draw_spreads(
 )
     return draw_spreads(
         Random.default_rng(),
-        dimensions,
+        dims,
         spread_min;
         spread_max=spread_max,
         x_min=x_min,
@@ -72,7 +72,7 @@ end
 
 function draw_spreads(
     rng::AbstractRNG,
-    dimensions::Integer,
+    dims::Integer,
     spread_min;
     spread_max=Inf,
     x_min=X_MIN,
@@ -85,7 +85,7 @@ function draw_spreads(
             ),
         )
     end
-    rates_spread = rand(rng, dist_spread, dimensions)
+    rates_spread = rand(rng, dist_spread, dims)
     spread_max = min((x_max - x_min) / 2, spread_max)
     return spread_min .+ rates_spread .* (spread_max - spread_min)
 end
@@ -124,7 +124,7 @@ function draw_centers(
 end
 
 function draw_interval(
-    dimensions::Integer,
+    dims::Integer,
     spread_min,
     volume_min;
     spread_max=Inf,
@@ -133,7 +133,7 @@ function draw_interval(
 )
     return draw_interval(
         Random.default_rng(),
-        dimensions,
+        dims,
         spread_min,
         volume_min;
         spread_max=spread_max,
@@ -144,7 +144,7 @@ end
 
 function draw_interval(
     rng::AbstractRNG,
-    dimensions::Integer,
+    dims::Integer,
     spread_min,
     volume_min;
     spread_max=Inf,
@@ -153,7 +153,7 @@ function draw_interval(
 )
     spreads = draw_spreads(
         rng,
-        dimensions - 1,
+        dims - 1,
         spread_min;
         spread_max=spread_max,
         x_min=x_min,
@@ -220,7 +220,7 @@ function draw_interval(
 
     # Insert the last center and spread at a random index so that there's no
     # weird bias towards the last dimension.
-    i_rand = rand(rng, 1:dimensions)
+    i_rand = rand(rng, 1:dims)
     insert!(spreads, i_rand, spread_last)
     insert!(centers, i_rand, center_last)
 
@@ -228,17 +228,17 @@ function draw_interval(
 end
 
 function draw_intervals(
-    dimensions::Integer,
+    dims::Integer,
     n_intervals,
-    spread_min=spread_ideal_cubes(dimensions, n_intervals),
-    volume_min=volume_min_factor(dimensions, n_intervals);
+    spread_min=spread_ideal_cubes(dims, n_intervals),
+    volume_min=volume_min_factor(dims, n_intervals);
     spread_max=Inf,
     x_min=X_MIN,
     x_max=X_MAX,
 )
     return draw_intervals(
         Random.default_rng(),
-        dimensions,
+        dims,
         n_intervals,
         spread_min,
         volume_min;
@@ -251,7 +251,7 @@ end
 """
 Parameters
 ----------
-dimensions : int > 0
+dims : int > 0
 n_intervals : int > 0
 volume_min : float > 0
 random_state : np.random.RandomState
@@ -259,16 +259,16 @@ random_state : np.random.RandomState
 Returns
 -------
 array, list, list
-    The intervals as an array of shape `(n_intervals, 2, dimensions)`, the
+    The intervals as an array of shape `(n_intervals, 2, dims)`, the
     set of pair-wise intersections between the intervals, the set of volumes
     of the non-empty ones of these pair-wise intersections.
 """
 function draw_intervals(
     rng::AbstractRNG,
-    dimensions::Integer,
+    dims::Integer,
     n_intervals,
-    spread_min=spread_ideal_cubes(dimensions, n_intervals),
-    volume_min=volume_min_factor(dimensions, n_intervals);
+    spread_min=spread_ideal_cubes(dims, n_intervals),
+    volume_min=volume_min_factor(dims, n_intervals);
     spread_max=Inf,
     x_min=X_MIN,
     x_max=X_MAX,
@@ -276,7 +276,7 @@ function draw_intervals(
     return [
         draw_interval(
             rng,
-            dimensions,
+            dims,
             spread_min,
             volume_min;
             spread_max=spread_max,
@@ -291,13 +291,13 @@ Given a number of intervals and an input space dimensions, compute the spread
 that a cube would have with a volume of `1/n_intervals` of input space volume.
 """
 function spread_ideal_cubes(
-    dimensions::Integer,
+    dims::Integer,
     n_intervals;
     x_min=X_MIN,
     x_max=X_MAX,
 )
-    volume_avg = (x_max - x_min)^dimensions / n_intervals
-    return volume_avg^(1.0 / dimensions) / 2.0
+    volume_avg = (x_max - x_min)^dims / n_intervals
+    return volume_avg^(1.0 / dims) / 2.0
 end
 
 # TODO Consider to factor in the number of training data points here
@@ -306,13 +306,13 @@ Given a number of intervals and an input space dimensions, compute the minimum
 volume as `factor` of `1/n_intervals` of input space volume.
 """
 function volume_min_factor(
-    dimensions::Integer,
+    dims::Integer,
     n_intervals,
     factor=0.1;
     x_min=X_MIN,
     x_max=X_MAX,
 )
-    volume_input_space = (x_max - x_min)^dimensions
+    volume_input_space = (x_max - x_min)^dims
     return factor * volume_input_space / n_intervals
 end
 

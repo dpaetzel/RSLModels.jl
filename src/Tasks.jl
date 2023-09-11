@@ -23,7 +23,7 @@ function dimensions(task::Task)
 end
 
 function generate(
-    dimensions::Integer,
+    dims::Integer,
     n_components,
     n_train;
     n_test=10 * n_train,
@@ -36,7 +36,13 @@ function generate(
     end
     rng = Random.Xoshiro(seed)
 
-    model = draw_model(rng, dimensions, n_components; x_min=x_min, x_max=x_max)
+    model = draw_model(
+        rng,
+        dims,
+        n_components;
+        x_min=x_min,
+        x_max=x_max,
+    )
     X, y = draw_data(rng, model, n_train)
     X_test, y_test = draw_data(rng, model, n_test)
 

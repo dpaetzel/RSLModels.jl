@@ -22,12 +22,12 @@ struct Model
         x_min=X_MIN,
         x_max=X_MAX,
     )
-        dimensions = Intervals.dimensions(conditions[1])
+        dims = Intervals.dimensions(conditions[1])
         if length(conditions) != length(local_models)
             error(
                 "number of conditions and number of local models are not equal",
             )
-        elseif !all(Intervals.dimensions.(conditions) .== dimensions)
+        elseif !all(Intervals.dimensions.(conditions) .== dims)
             error("conditions have to have the same dimension")
         end
         return new(conditions, local_models, x_min, x_max)
@@ -38,43 +38,41 @@ function dimensions(model::Model)
     return Intervals.dimensions(model.conditions[1])
 end
 
-function draw_model(dimensions::Integer, n_components)
-    return draw_model(Random.default_rng(), dimensions, n_components)
+function draw_model(dims::Integer, n_components)
+    return draw_model(Random.default_rng(), dims, n_components)
 end
 
-# TODO Expose spread_{min,max}, volume_min, …
 function draw_model(
     rng::AbstractRNG,
-    dimensions::Integer,
+    dims::Integer,
     n_components;
     x_min=X_MIN,
     x_max=X_MAX,
 )
-    conditions =
-        draw_intervals(rng, dimensions, n_components; x_min=x_min, x_max=x_max)
+    conditions = draw_intervals(
+        rng,
+        dims,
+        n_components,
+        x_min=x_min,
+        x_max=x_max,
+    )
     local_models = [draw_constantmodel(rng) for _ in 1:n_components]
 
     return Model(conditions, local_models; x_min=x_min, x_max=x_max)
 end
 
-function draw_inputs(dimensions::Integer, n=1; x_min=X_MIN, x_max=X_MAX)
-    return draw_inputs(
-        Random.default_rng(),
-        dimensions,
-        n;
-        x_min=x_min,
-        x_max=x_max,
-    )
+function draw_inputs(dims::Integer, n=1; x_min=X_MIN, x_max=X_MAX)
+    return draw_inputs(Random.default_rng(), dims, n; x_min=x_min, x_max=x_max)
 end
 
 function draw_inputs(
     rng::AbstractRNG,
-    dimensions::Integer,
+    dims::Integer,
     n=1;
     x_min=X_MIN,
     x_max=X_MAX,
 )
-    return rand(rng, Uniform(x_min, x_max), n, dimensions)
+    return rand(rng, Uniform(x_min, x_max), n, dims)
 end
 
 function match(interval::Interval, x)
