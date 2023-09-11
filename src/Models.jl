@@ -46,6 +46,11 @@ function draw_model(
     rng::AbstractRNG,
     dims::Integer,
     n_components;
+    # Note that these are the same default values as the ones given for
+    # `Intervals.draw_intervals`.
+    spread_min=Intervals.spread_ideal_cubes(dims, n_components),
+    volume_min=Intervals.volume_min_factor(dims, n_components),
+    spread_max=Inf,
     x_min=X_MIN,
     x_max=X_MAX,
 )
@@ -53,6 +58,9 @@ function draw_model(
         rng,
         dims,
         n_components,
+        spread_min,
+        volume_min;
+        spread_max=spread_max,
         x_min=x_min,
         x_max=x_max,
     )

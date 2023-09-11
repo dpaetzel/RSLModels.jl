@@ -2,6 +2,7 @@ module Tasks
 
 using Random
 
+using ..Intervals
 using ..Models
 
 export Task, dimensions, generate, save, load
@@ -28,6 +29,11 @@ function generate(
     n_train;
     n_test=10 * n_train,
     seed::Union{Nothing,Integer}=nothing,
+    # Note that these are the same default values as the ones given for
+    # `Intervals.draw_intervals`.
+    spread_min=Intervals.spread_ideal_cubes(dims, n_components),
+    volume_min=Intervals.volume_min_factor(dims, n_components),
+    spread_max=Inf,
     x_min=X_MIN,
     x_max=X_MAX,
 )
@@ -40,6 +46,9 @@ function generate(
         rng,
         dims,
         n_components;
+        spread_min=spread_min,
+        volume_min=volume_min,
+        spread_max=spread_max,
         x_min=x_min,
         x_max=x_max,
     )
