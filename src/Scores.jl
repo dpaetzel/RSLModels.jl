@@ -175,7 +175,7 @@ function plot_interval(
     return ax
 end
 
-function plot_mapping(intervals1, intervals2)
+function plot_mapping(intervals1, intervals2; X=nothing)
     # Make It So™ that intervals1 is the smaller set of intervals.
     if length(intervals1) > length(intervals2)
         tmp = intervals1
@@ -218,6 +218,21 @@ function plot_mapping(intervals1, intervals2)
         "Most similar intervals in first set\n" *
         "(overall score in this direction: $(round(sims[2], digits=2)))",
     )
+
+    # Plot data points if given.
+    if !isnothing(X)
+        for i in 1:2
+            for j in 1:2
+                ax[i, j].scatter(
+                    X[:, 1],
+                    X[:, 2];
+                    c="black",
+                    alpha=0.2,
+                    marker="+",
+                )
+            end
+        end
+    end
 
     # Compute which interval (indices) aren't mapped to.
     idx_not_mapped_to_from_1_to_2 =
@@ -291,6 +306,8 @@ function plot_mapping(intervals1, intervals2)
             facecolor="none",
         )
     end
+
+    return fig, ax
 end
 
 end
