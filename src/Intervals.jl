@@ -31,6 +31,12 @@ struct Interval
     end
 end
 
+# The volume of input space.
+function volume(dims::Integer; x_min=X_MIN, x_max=X_MAX)
+    return (x_max - x_min)^dims
+end
+
+# The volume of the given interval.
 function volume(interval::Interval)
     return prod(interval.ubound .- interval.lbound)
 end
