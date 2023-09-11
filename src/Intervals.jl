@@ -235,22 +235,27 @@ end
 
 function draw_intervals(
     dims::Integer,
-    n_intervals,
+    n_intervals;
     spread_min=spread_ideal_cubes(dims, n_intervals),
-    volume_min=volume_min_factor(dims, n_intervals);
     spread_max=Inf,
     x_min=X_MIN,
     x_max=X_MAX,
+    volume_min=Intervals.volume_min_factor(
+        dims,
+        n_components;
+        x_min=x_min,
+        x_max=x_max,
+    ),
 )
     return draw_intervals(
         Random.default_rng(),
         dims,
-        n_intervals,
-        spread_min,
-        volume_min;
+        n_intervals;
+        spread_min=spread_min,
         spread_max=spread_max,
         x_min=x_min,
         x_max=x_max,
+        volume_min=volume_min,
     )
 end
 
@@ -272,12 +277,17 @@ array, list, list
 function draw_intervals(
     rng::AbstractRNG,
     dims::Integer,
-    n_intervals,
+    n_intervals;
     spread_min=spread_ideal_cubes(dims, n_intervals),
-    volume_min=volume_min_factor(dims, n_intervals);
     spread_max=Inf,
     x_min=X_MIN,
     x_max=X_MAX,
+    volume_min=Intervals.volume_min_factor(
+        dims,
+        n_components;
+        x_min=x_min,
+        x_max=x_max,
+    ),
 )
     return [
         draw_interval(
@@ -308,7 +318,7 @@ end
 
 # TODO Consider to factor in the number of training data points here
 """
-Given a number of intervals and an input space dimensions, compute the minimum
+Given a number of intervals and input space dimensions, compute the minimum
 volume as `factor` of `1/n_intervals` of input space volume.
 """
 function volume_min_factor(
