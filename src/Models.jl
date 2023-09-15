@@ -34,7 +34,7 @@ struct Model
     end
 end
 
-function dimensions(model::Model)
+function Intervals.dimensions(model::Model)
     return Intervals.dimensions(model.conditions[1])
 end
 

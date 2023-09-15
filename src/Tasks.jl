@@ -19,7 +19,7 @@ struct Task
     y_test::AbstractVector
 end
 
-function dimensions(task::Task)
+function Intervals.dimensions(task::Task)
     return Models.dimensions(task.model)
 end
 
