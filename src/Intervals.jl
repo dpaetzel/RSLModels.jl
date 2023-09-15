@@ -9,6 +9,7 @@ export Interval,
     dimensions,
     draw_intervals,
     elemof,
+    hull,
     intersection,
     plot_interval,
     volume
@@ -395,6 +396,26 @@ function intersection(interval1::Interval, interval2::Interval)
     else
         return Interval(l, u)
     end
+end
+
+"""
+The convex hull of the two intervals.
+"""
+function hull(interval1, interval2)
+    lbounds = [interval1.lbound interval2.lbound]
+    ubounds = [interval1.ubound interval2.ubound]
+    lopens = [interval1.lopen interval2.lopen]
+    uopens = [interval1.uopen interval2.uopen]
+
+    idx_lbound = argmin(lbounds; dims=2)
+    idx_ubound = argmax(ubounds; dims=2)
+
+    lbound = reshape(lbounds[idx_lbound], 2)
+    ubound = reshape(ubounds[idx_ubound], 2)
+    lopen = reshape(lopens[idx_lbound], 2)
+    uopen = reshape(uopens[idx_ubound], 2)
+
+    return Interval(lbound, ubound; lopen=lopen, uopen=uopen)
 end
 
 end

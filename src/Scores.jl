@@ -4,13 +4,16 @@ using PyPlot
 
 using ..Intervals
 
-export similarities_pairwise,
-    mappings,
+export mappings,
+    plot_interval,
+    plot_mapping,
+    simf_traversal_count,
     similarities,
+    similarities_pairwise,
     similarity,
     similarity_max,
-    plot_interval,
-    plot_mapping
+    traversed_indices,
+    traversal_count
 
 const X_MIN::Float64 = Intervals.X_MIN
 const X_MAX::Float64 = Intervals.X_MAX
@@ -45,6 +48,58 @@ function subsethood_mean(interval1::Interval, interval2::Interval)
     ssh1 = subsethood(interval1, interval2)
     ssh2 = subsethood(interval2, interval1)
     return (ssh1 + ssh2) / 2.0
+end
+
+"""
+The indices of data points in `X` that would be traversed by the lower and upper
+bounds of one of the intervals if it were transformed into the other.
+
+The indices are returned in two matrices, one matrix for the indices “caused” by
+the lower bound and one matrix for the indices “caused” by the upper bound. Each
+of these matrices has `size(X, 1)` rows (i.e. one per data point) and
+`dimensions(interval1)` columns (`dimensions(interval1) ==
+dimensions(interval2)` is assumed). Columns correspond to the dimensions of the
+interval; traversals of a certain data point `x` can be caused by different
+dimensions.
+"""
+function traversed_indices(
+    interval1::Interval,
+    interval2::Interval,
+    X::AbstractMatrix,
+)
+    inhull = elemof(X, hull(interval1, interval2))
+
+    lbound_l = min.(interval1.lbound, interval2.lbound)
+    lbound_u = max.(interval1.lbound, interval2.lbound)
+    ubound_l = min.(interval1.ubound, interval2.ubound)
+    ubound_u = max.(interval1.ubound, interval2.ubound)
+
+    idx_trav_l = inhull .&& (lbound_l' .<= X .<= lbound_u')
+    idx_trav_u = inhull .&& (ubound_l' .<= X .<= ubound_u')
+    return idx_trav_l, idx_trav_u
+end
+
+"""
+The number of data points in `X` that would be traversed by the lower and upper
+bounds of one of the intervals if it were transformed into the other. Note that
+some data points may be counted multiple times if they are traversed by multiple
+bounds.
+"""
+function traversal_count(
+    interval1::Interval,
+    interval2::Interval,
+    X::AbstractMatrix,
+)
+    idx_trav_l, idx_trav_u = traversed_indices(interval1, interval2, X)
+    return sum(idx_trav_l) + sum(idx_trav_u)
+end
+
+"""
+Given input data `X`, build a traversal count–based similarity function for
+intervals.
+"""
+function simf_traversal_count(X::AbstractMatrix)
+    return (i1, i2) -> -traversal_count(i1, i2, X)
 end
 
 """
