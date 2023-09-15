@@ -230,7 +230,7 @@ function plot_interval(
     return ax
 end
 
-function plot_mapping(intervals1, intervals2; X=nothing)
+function plot_mapping(intervals1, intervals2; X=nothing, simf=subsethood_mean)
     # Make It So™ that intervals1 is the smaller set of intervals.
     if length(intervals1) > length(intervals2)
         tmp = intervals1
@@ -242,7 +242,7 @@ function plot_mapping(intervals1, intervals2; X=nothing)
     # each interval in `intervals1` the closest interval in `intervals2`. Do the
     # same for the transposed array to get for each interval in `intervals2` the
     # closest interval in `intervals1`.
-    sims_pairwise = similarities_pairwise(intervals1, intervals2)
+    sims_pairwise = similarities_pairwise(intervals1, intervals2; simf=simf)
     idx1to2, idx2to1 = idx_mapping(sims_pairwise)
     idx1to2, idx2to1 = mappings(idx1to2, idx2to1)
 
