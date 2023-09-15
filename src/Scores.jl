@@ -259,9 +259,7 @@ function plot_mapping(intervals1, intervals2; X=nothing, simf=subsethood_mean)
     fig, ax = plt.subplots(2, 2; layout="constrained", figsize=(10, 5))
     fig.suptitle(
         "Mapping between intervals\n" *
-        "(overall similarity score: $(round(sim, digits=2)); " *
-        "theoretical maximum in this case: " *
-        "$(similarity_max(intervals1, intervals2)))",
+        "(overall similarity score: $(round(sim, digits=2)))",
     )
     ax[1, 1].set_title("Intervals in first set ($(length(intervals1)))")
     ax[1, 2].set_title(
