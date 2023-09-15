@@ -88,25 +88,8 @@ function draw_inputs(
     return rand(rng, Uniform(x_min, x_max), n, dims)
 end
 
-function match(interval::Interval, x)
-    return interval.lbound <= x <= interval.ubound
-end
-
-# TODO Consider to check for dimensions matching here
-function match(interval::Interval, X::AbstractMatrix)
-    return all(interval.lbound' .<= X .<= interval.ubound'; dims=2)
-end
-
-function match(intervals::AbstractVector{Interval}, X::AbstractMatrix)
-    matching_matrix = Matrix{Float64}(undef, size(X)[1], length(intervals))
-    for i in 1:length(intervals)
-        matching_matrix[:, i] = match(intervals[i], X)
-    end
-    return matching_matrix
-end
-
 function match(model::Model, X::AbstractMatrix)
-    return match(model.conditions, X)
+    return elemof(X, model.conditions)
 end
 
 function draw_data(model::Model, n)

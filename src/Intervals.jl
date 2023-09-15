@@ -6,7 +6,12 @@ using Random
 using StatsBase
 
 export Interval,
-    dimensions, draw_intervals, intersection, match, plot_interval, volume
+    dimensions,
+    draw_intervals,
+    elemof,
+    intersection,
+    plot_interval,
+    volume
 
 # We want to track global assignments as well when doing
 # `includet(thisfile.jl)`.
@@ -18,17 +23,62 @@ const X_MAX::Float64 = 1.0
 # TODO Consider to move this global constant somewhere
 const dist_spread = Beta(1.55, 2.74)
 
-# TODO Consider to represent empty arrays properly instead of `nothing`
 struct Interval
     lbound::AbstractVector{Float64}
     ubound::AbstractVector{Float64}
+    lopen::AbstractVector{Bool}
+    uopen::AbstractVector{Bool}
     function Interval(
         lbound::AbstractVector{Float64},
-        ubound::AbstractVector{Float64},
+        ubound::AbstractVector{Float64};
+        lopen::AbstractVector{Bool}=repeat([false], length(lbound)),
+        uopen::AbstractVector{Bool}=repeat([false], length(ubound)),
     )
+        # Note that open intervals are allowed to have lower and upper bounds be
+        # the same (which results in an empty set).
         return any(lbound .> ubound) ? error("out of order") :
-               new(lbound, ubound)
+               new(lbound, ubound, lopen, uopen)
     end
+end
+
+function elemof(x, interval::Interval)
+    # This has been made enormously ugly by the fact that I need to allow for
+    # closed/open options at the bound level.
+    for dim in 1:dimensions(interval)
+        # If the lower bound is truly greater than the value then we're always
+        # false (independent of whether the interval is open or not).
+        if interval.lbound[dim] > x[dim]
+            return false
+        end
+        # If the interval is open, further check for equality.
+        if interval.lopen[dim] && interval.lbound[dim] == x[dim]
+            return false
+        end
+
+        if interval.ubound[dim] < x[dim]
+            return false
+        end
+        if interval.uopen[dim] && interval.ubound[dim] == x[dim]
+            return false
+        end
+    end
+    return true
+end
+
+function elemof(X::AbstractMatrix, interval::Interval)
+    result = Array{Bool}(undef, size(X)[1])
+    for n in 1:size(X)[1]
+        result[n] = elemof(X[n, :], interval)
+    end
+    return result
+end
+
+function elemof(X::AbstractMatrix, intervals::AbstractVector{Interval})
+    matching_matrix = Matrix{Bool}(undef, size(X)[1], length(intervals))
+    for i in 1:length(intervals)
+        matching_matrix[:, i] = elemof(X, intervals[i])
+    end
+    return matching_matrix
 end
 
 # The volume of input space.
