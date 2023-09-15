@@ -6,7 +6,7 @@ using Distributions
 using ..Intervals
 using ..LocalModels
 
-export Model, dimensions, draw_model, match, draw_data
+export Model, dimensions, draw_data, draw_model, match
 
 const X_MIN::Float64 = Intervals.X_MIN
 const X_MAX::Float64 = Intervals.X_MAX
