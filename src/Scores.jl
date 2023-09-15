@@ -365,4 +365,55 @@ function plot_mapping(intervals1, intervals2; X=nothing, simf=subsethood_mean)
     return fig, ax
 end
 
+function plot_traversal_count(interval1, interval2, X)
+    if dimensions(interval1) != 2 || dimensions(interval2) != 2
+        error("only 2-dimensional intervals supported")
+    end
+
+    idx_trav_l, idx_trav_u = traversed_indices(i1, i2, X)
+    hll = hull(i1, i2)
+
+    fig, ax = subplots(1)
+    ax.scatter(X[:, 1], X[:, 2]; marker="+")
+    plot_interval(
+        ax,
+        i1;
+        edgecolor="black",
+        linestyle="dashed",
+        facecolor="none",
+    )
+    plot_interval(
+        ax,
+        i2;
+        edgecolor="black",
+        linestyle="dashed",
+        facecolor="none",
+    )
+    plot_interval(
+        ax,
+        hll;
+        edgecolor="black",
+        linestyle="dashed",
+        facecolor="none",
+    )
+
+    function jitter()
+        return randn(size(X_trav, 1)) * 0.002
+    end
+
+    X_trav = X[idx_trav_l[:, 1], :]
+    ax.scatter(X_trav[:, 1] + jitter(), X_trav[:, 2] + jitter(); color="C2")
+    X_trav = X[idx_trav_l[:, 2], :]
+    ax.scatter(X_trav[:, 1] + jitter(), X_trav[:, 2] + jitter(); color="C3")
+
+    X_trav = X[idx_trav_u[:, 1], :]
+    ax.scatter(X_trav[:, 1] + jitter(), X_trav[:, 2] + jitter(); color="C4")
+    X_trav = X[idx_trav_u[:, 2], :]
+    return ax.scatter(
+        X_trav[:, 1] + jitter(),
+        X_trav[:, 2] + jitter();
+        color="C5",
+    )
+end
+
 end
