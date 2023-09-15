@@ -292,7 +292,7 @@ function draw_intervals(
     x_max=X_MAX,
     volume_min=Intervals.volume_min_factor(
         dims,
-        n_components;
+        n_intervals;
         x_min=x_min,
         x_max=x_max,
     ),
@@ -334,7 +334,7 @@ function draw_intervals(
     x_max=X_MAX,
     volume_min=Intervals.volume_min_factor(
         dims,
-        n_components;
+        n_intervals;
         x_min=x_min,
         x_max=x_max,
     ),
