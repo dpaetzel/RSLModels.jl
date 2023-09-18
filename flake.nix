@@ -1,7 +1,6 @@
 {
   inputs = {
-    nixpkgs.url =
-      "github:NixOS/nixpkgs/1e2590679d0ed2cee2736e8b80373178d085d263";
+    nixpkgs.url = "github:dpaetzel/nixpkgs/dpaetzel/nixos-config";
     systems.url = "github:nix-systems/default";
     devenv.url = "github:cachix/devenv";
   };
