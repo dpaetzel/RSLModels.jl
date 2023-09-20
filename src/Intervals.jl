@@ -7,6 +7,7 @@ using StatsBase
 
 export Interval,
     dimensions,
+    draw_interval,
     draw_intervals,
     elemof,
     hull,

@@ -7,7 +7,10 @@ using ..Intervals
 export mappings,
     plot_interval,
     plot_mapping,
+    plot_traversal_count,
     simf_traversal_count,
+    simf_traversal_count_raw,
+    simf_traversal_count_root,
     similarities,
     similarities_pairwise,
     similarity,
@@ -98,8 +101,21 @@ end
 Given input data `X`, build a traversal count–based similarity function for
 intervals.
 """
-function simf_traversal_count(X::AbstractMatrix)
+function simf_traversal_count_raw(X::AbstractMatrix)
     return (i1, i2) -> -traversal_count(i1, i2, X)
+end
+
+"""
+Given input data `X`, build a traversal count–based similarity function for
+intervals; mitigate punishing large intervals by taking the `DX`th root.
+"""
+function simf_traversal_count_root(X::AbstractMatrix)
+    function simf(i1, i2)
+        idx_trav_l, idx_trav_u = traversed_indices(i1, i2, X)
+        ns_trav = [sum(idx_trav_l; dims=1) sum(idx_trav_u; dims=1)]
+        return -sum(ns_trav .^ (1 / dimensions(i1)))
+    end
+    return simf
 end
 
 """
@@ -256,7 +272,7 @@ function plot_mapping(intervals1, intervals2; X=nothing, simf=subsethood_mean)
     rule_colour = idx -> cmap(colnorm(idx))
 
     # Initialize the figure.
-    fig, ax = plt.subplots(2, 2; layout="constrained", figsize=(10, 5))
+    fig, ax = plt.subplots(2, 2; layout="constrained", figsize=(20, 10))
     fig.suptitle(
         "Mapping between intervals\n" *
         "(overall similarity score: $(round(sim, digits=2)))",
@@ -363,36 +379,28 @@ function plot_mapping(intervals1, intervals2; X=nothing, simf=subsethood_mean)
     return fig, ax
 end
 
-function plot_traversal_count(interval1, interval2, X)
+function plot_traversal_count(interval1, interval2, X; ax=nothing)
     if dimensions(interval1) != 2 || dimensions(interval2) != 2
         error("only 2-dimensional intervals supported")
     end
 
-    idx_trav_l, idx_trav_u = traversed_indices(i1, i2, X)
-    hll = hull(i1, i2)
+    if ax == nothing
+        fig, ax = subplots(1)
+    end
 
-    fig, ax = subplots(1)
+    idx_trav_l, idx_trav_u = traversed_indices(interval1, interval2, X)
+    hll = hull(interval1, interval2)
+
     ax.scatter(X[:, 1], X[:, 2]; marker="+")
-    plot_interval(
-        ax,
-        i1;
-        edgecolor="black",
-        linestyle="dashed",
-        facecolor="none",
-    )
-    plot_interval(
-        ax,
-        i2;
-        edgecolor="black",
-        linestyle="dashed",
-        facecolor="none",
-    )
+    style = Dict(:alpha => 0.5)
+    plot_interval(ax, interval1; edgecolor="C0", facecolor="C0", style...)
+    plot_interval(ax, interval2; edgecolor="C1", facecolor="C1", style...)
     plot_interval(
         ax,
         hll;
-        edgecolor="black",
-        linestyle="dashed",
+        edgecolor="gray",
         facecolor="none",
+        linestyle="dashed",
     )
 
     function jitter()
@@ -400,18 +408,37 @@ function plot_traversal_count(interval1, interval2, X)
     end
 
     X_trav = X[idx_trav_l[:, 1], :]
-    ax.scatter(X_trav[:, 1] + jitter(), X_trav[:, 2] + jitter(); color="C2")
+    style = Dict(:marker => "x")
+    ax.scatter(
+        X_trav[:, 1] + jitter(),
+        X_trav[:, 2] + jitter();
+        color="C2",
+        style...,
+    )
     X_trav = X[idx_trav_l[:, 2], :]
-    ax.scatter(X_trav[:, 1] + jitter(), X_trav[:, 2] + jitter(); color="C3")
+    ax.scatter(
+        X_trav[:, 1] + jitter(),
+        X_trav[:, 2] + jitter();
+        color="C3",
+        style...,
+    )
 
     X_trav = X[idx_trav_u[:, 1], :]
-    ax.scatter(X_trav[:, 1] + jitter(), X_trav[:, 2] + jitter(); color="C4")
+    ax.scatter(
+        X_trav[:, 1] + jitter(),
+        X_trav[:, 2] + jitter();
+        color="C4",
+        style...,
+    )
     X_trav = X[idx_trav_u[:, 2], :]
     return ax.scatter(
         X_trav[:, 1] + jitter(),
         X_trav[:, 2] + jitter();
         color="C5",
+        style...,
     )
+
+    return fig, ax
 end
 
 end
