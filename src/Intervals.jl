@@ -12,6 +12,7 @@ export Interval,
     elemof,
     hull,
     intersection,
+    mutate,
     plot_interval,
     volume
 
@@ -417,6 +418,38 @@ function hull(interval1, interval2)
     uopen = reshape(uopens[idx_ubound], 2)
 
     return Interval(lbound, ubound; lopen=lopen, uopen=uopen)
+end
+
+"""
+Uses the default RNG to mutate the lower and upper bounds of the given interval
+at random (see code).
+"""
+function mutate(interval::Interval; x_min=X_MIN, x_max=X_MAX)
+    lbound, ubound = interval.lbound, interval.ubound
+    lbound_new = lbound .+ rand(size(lbound, 1)) * 0.2 * (X_MAX - X_MIN)
+    ubound_new = ubound .+ rand(size(ubound, 1)) * 0.2 * (X_MAX - X_MIN)
+    return Interval(
+        lbound_new,
+        ubound_new;
+        lopen=interval.lopen,
+        uopen=interval.uopen,
+    )
+end
+
+"""
+Uses the default RNG to mutate the lower and upper bounds of `n` (randomly
+drawn) of the given intervals at random (see code).
+"""
+function mutate(
+    intervals::AbstractVector{Interval},
+    n::Integer;
+    x_min=X_MIN,
+    x_max=X_MAX,
+)
+    intervals_changed = deepcopy(intervals)
+    idx = sample(1:size(intervals_changed, 1), n; replace=false)
+    intervals_changed[idx] .= mutate.(intervals_changed[idx])
+    return intervals_changed
 end
 
 end
