@@ -326,8 +326,8 @@ function plot_mapping(
         for i in 1:2
             for j in 1:2
                 ax[i, j].scatter(
-                    X[:, 1],
-                    X[:, 2];
+                    view(X, :, 1),
+                    view(X, :, 2);
                     c="black",
                     alpha=0.2,
                     marker="+",
@@ -424,7 +424,7 @@ function plot_traversal_count(interval1, interval2, X; ax=nothing)
     idx_trav_l, idx_trav_u = traversed_indices(interval1, interval2, X)
     hll = hull(interval1, interval2)
 
-    ax.scatter(X[:, 1], X[:, 2]; marker="+")
+    ax.scatter(view(X, :, 1), view(X, :, 2); marker="+")
     style = Dict(:alpha => 0.5)
     plot_interval(ax, interval1; edgecolor="C0", facecolor="C0", style...)
     plot_interval(ax, interval2; edgecolor="C1", facecolor="C1", style...)
@@ -440,33 +440,33 @@ function plot_traversal_count(interval1, interval2, X; ax=nothing)
         return randn(size(X_trav, 1)) * 0.002
     end
 
-    X_trav = X[idx_trav_l[:, 1], :]
+    X_trav = X[view(idx_trav_l, :, 1), :]
     style = Dict(:marker => "x")
     ax.scatter(
-        X_trav[:, 1] + jitter(),
-        X_trav[:, 2] + jitter();
+        view(X_trav, :, 1) + jitter(),
+        view(X_trav, :, 2) + jitter();
         color="C2",
         style...,
     )
-    X_trav = X[idx_trav_l[:, 2], :]
+    X_trav = X[view(idx_trav_l, :, 2), :]
     ax.scatter(
-        X_trav[:, 1] + jitter(),
-        X_trav[:, 2] + jitter();
+        view(X_trav, :, 1) + jitter(),
+        view(X_trav, :, 2) + jitter();
         color="C3",
         style...,
     )
 
-    X_trav = X[idx_trav_u[:, 1], :]
+    X_trav = X[view(idx_trav_u, :, 1), :]
     ax.scatter(
-        X_trav[:, 1] + jitter(),
-        X_trav[:, 2] + jitter();
+        view(X_trav, :, 1) + jitter(),
+        view(X_trav, :, 2) + jitter();
         color="C4",
         style...,
     )
-    X_trav = X[idx_trav_u[:, 2], :]
+    X_trav = X[view(idx_trav_u, :, 2), :]
     return ax.scatter(
-        X_trav[:, 1] + jitter(),
-        X_trav[:, 2] + jitter();
+        view(X_trav, :, 1) + jitter(),
+        view(X_trav, :, 2) + jitter();
         color="C5",
         style...,
     )

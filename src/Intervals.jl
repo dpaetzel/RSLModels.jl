@@ -71,7 +71,7 @@ end
 function elemof(X::AbstractMatrix{Float64}, interval::Interval)
     result = Array{Bool}(undef, size(X)[1])
     for n in 1:size(X)[1]
-        result[n] = elemof(X[n, :], interval)
+        result[n] = elemof(view(X, n, :), interval)
     end
     return result
 end
