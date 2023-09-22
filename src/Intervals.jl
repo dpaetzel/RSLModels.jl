@@ -415,10 +415,11 @@ function hull(interval1, interval2)
     idx_lbound = argmin(lbounds; dims=2)
     idx_ubound = argmax(ubounds; dims=2)
 
-    lbound = reshape(lbounds[idx_lbound], 2)
-    ubound = reshape(ubounds[idx_ubound], 2)
-    lopen = reshape(lopens[idx_lbound], 2)
-    uopen = reshape(uopens[idx_ubound], 2)
+    dims = dimensions(interval1)
+    lbound = reshape(lbounds[idx_lbound], dims)
+    ubound = reshape(ubounds[idx_ubound], dims)
+    lopen = reshape(lopens[idx_lbound], dims)
+    uopen = reshape(uopens[idx_ubound], dims)
 
     return Interval(lbound, ubound; lopen=lopen, uopen=uopen)
 end
