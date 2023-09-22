@@ -435,6 +435,8 @@ function mutate(interval::Interval; factor=0.1, x_min=X_MIN, x_max=X_MAX)
     ubound_new =
         ubound .+
         (rand(size(ubound, 1)) .* factor .- factor) .* (X_MAX - X_MIN)
+    lbound_new = clamp.(lbound_new, X_MIN, X_MAX)
+    ubound_new = clamp.(ubound_new, X_MIN, X_MAX)
     return Interval(
         lbound_new,
         ubound_new;
