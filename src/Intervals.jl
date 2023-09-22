@@ -462,4 +462,21 @@ function mutate(
     return intervals_changed
 end
 
+"""
+Mutate the lower and upper bounds of the intervals at the given indices at
+random (see code).
+"""
+function mutate(
+    intervals::AbstractVector{Interval},
+    indices::AbstractVector;
+    factor=0.1,
+    x_min=X_MIN,
+    x_max=X_MAX,
+)
+    intervals_changed = deepcopy(intervals)
+    idx = indices
+    intervals_changed[idx] .= mutate.(intervals_changed[idx]; factor=factor)
+    return intervals_changed
+end
+
 end
