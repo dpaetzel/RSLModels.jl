@@ -427,10 +427,14 @@ end
 Uses the default RNG to mutate the lower and upper bounds of the given interval
 at random (see code).
 """
-function mutate(interval::Interval; x_min=X_MIN, x_max=X_MAX)
+function mutate(interval::Interval; factor=0.1, x_min=X_MIN, x_max=X_MAX)
     lbound, ubound = interval.lbound, interval.ubound
-    lbound_new = lbound .+ rand(size(lbound, 1)) * 0.2 * (X_MAX - X_MIN)
-    ubound_new = ubound .+ rand(size(ubound, 1)) * 0.2 * (X_MAX - X_MIN)
+    lbound_new =
+        lbound .+
+        (rand(size(lbound, 1)) .* factor .- factor) .* (X_MAX - X_MIN)
+    ubound_new =
+        ubound .+
+        (rand(size(ubound, 1)) .* factor .- factor) .* (X_MAX - X_MIN)
     return Interval(
         lbound_new,
         ubound_new;
@@ -446,12 +450,13 @@ drawn) of the given intervals at random (see code).
 function mutate(
     intervals::AbstractVector{Interval},
     n::Integer;
+    factor=0.1,
     x_min=X_MIN,
     x_max=X_MAX,
 )
     intervals_changed = deepcopy(intervals)
     idx = sample(1:size(intervals_changed, 1), n; replace=false)
-    intervals_changed[idx] .= mutate.(intervals_changed[idx])
+    intervals_changed[idx] .= mutate.(intervals_changed[idx]; factor=factor)
     return intervals_changed
 end
 
