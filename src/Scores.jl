@@ -271,7 +271,13 @@ function plot_interval(
     return ax
 end
 
-function plot_mapping(intervals1, intervals2; X=nothing, simf=subsethood_mean)
+function plot_mapping(
+    intervals1,
+    intervals2;
+    X=nothing,
+    simf=subsethood_mean,
+    ax=nothing,
+)
     # Make It So™ that intervals1 is the smaller set of intervals.
     if length(intervals1) > length(intervals2)
         tmp = intervals1
@@ -297,11 +303,13 @@ function plot_mapping(intervals1, intervals2; X=nothing, simf=subsethood_mean)
     rule_colour = idx -> cmap(colnorm(idx))
 
     # Initialize the figure.
-    fig, ax = plt.subplots(2, 2; layout="constrained", figsize=(20, 10))
-    fig.suptitle(
-        "Mapping between intervals\n" *
-        "(overall similarity score: $(round(sim, digits=2)))",
-    )
+    if ax == nothing
+        fig, ax = plt.subplots(2, 2; layout="constrained", figsize=(20, 10))
+        fig.suptitle(
+            "Mapping between intervals\n" *
+            "(overall similarity score: $(round(sim, digits=2)))",
+        )
+    end
     ax[1, 1].set_title("Intervals in first set ($(length(intervals1)))")
     ax[1, 2].set_title(
         "Most similar intervals in second set\n" *
@@ -463,7 +471,11 @@ function plot_traversal_count(interval1, interval2, X; ax=nothing)
         style...,
     )
 
-    return fig, ax
+    if ax == nothing
+        return fig, ax
+    else
+        return ax
+    end
 end
 
 end
