@@ -44,7 +44,7 @@ struct Interval
     end
 end
 
-function elemof(x, interval::Interval)
+function elemof(x::AbstractVector{Float64}, interval::Interval)
     # This has been made enormously ugly by the fact that I need to allow for
     # closed/open options at the bound level.
     for dim in 1:dimensions(interval)
@@ -68,7 +68,7 @@ function elemof(x, interval::Interval)
     return true
 end
 
-function elemof(X::AbstractMatrix, interval::Interval)
+function elemof(X::AbstractMatrix{Float64}, interval::Interval)
     result = Array{Bool}(undef, size(X)[1])
     for n in 1:size(X)[1]
         result[n] = elemof(X[n, :], interval)
@@ -76,7 +76,10 @@ function elemof(X::AbstractMatrix, interval::Interval)
     return result
 end
 
-function elemof(X::AbstractMatrix, intervals::AbstractVector{Interval})
+function elemof(
+    X::AbstractMatrix{Float64},
+    intervals::AbstractVector{Interval},
+)
     matching_matrix = Matrix{Bool}(undef, size(X)[1], length(intervals))
     for i in 1:length(intervals)
         matching_matrix[:, i] = elemof(X, intervals[i])
@@ -95,7 +98,7 @@ function volume(interval::Interval)
 end
 
 function dimensions(interval::Interval)
-    return length(interval.lbound)
+    return size(interval.lbound, 1)::Int64
 end
 
 """
@@ -174,7 +177,7 @@ end
 # have `Vector{T} <: Vector` for all `T`.
 function draw_centers(
     rng::AbstractRNG,
-    spread::Vector;
+    spread::AbstractVector{Float64};
     x_min=X_MIN,
     x_max=X_MAX,
 )

@@ -68,8 +68,12 @@ dimensions.
 function traversed_indices(
     interval1::Interval,
     interval2::Interval,
-    X::AbstractMatrix,
+    X::AbstractMatrix{Float64},
 )
+    # NOTE I could speed this up by precomputing all `elemof(X, interval1)` and
+    # `elemof(X, interval2)` vectors and only computing and checking the hull if
+    # necessary (i.e. if its not in one of the two intervals themselves) since I
+    # can then reuse the `elemof(X, interval)` matrices many times.
     inhull = elemof(X, hull(interval1, interval2))
 
     lbound_l = min.(interval1.lbound, interval2.lbound)
@@ -91,7 +95,7 @@ bounds.
 function traversal_count(
     interval1::Interval,
     interval2::Interval,
-    X::AbstractMatrix,
+    X::AbstractMatrix{Float64},
 )
     idx_trav_l, idx_trav_u = traversed_indices(interval1, interval2, X)
     return sum(idx_trav_l) + sum(idx_trav_u)
@@ -101,7 +105,7 @@ end
 Given input data `X`, build a traversal count–based similarity function for
 intervals.
 """
-function simf_traversal_count_raw(X::AbstractMatrix)
+function simf_traversal_count_raw(X::AbstractMatrix{Float64})
     return (i1, i2) -> -traversal_count(i1, i2, X)
 end
 
@@ -109,7 +113,7 @@ end
 Given input data `X`, build a traversal count–based similarity function for
 intervals; mitigate punishing large intervals by taking the `DX`th root.
 """
-function simf_traversal_count_root(X::AbstractMatrix)
+function simf_traversal_count_root(X::AbstractMatrix{Float64})
     function simf(i1, i2)
         idx_trav_l, idx_trav_u = traversed_indices(i1, i2, X)
         ns_trav = [sum(idx_trav_l; dims=1) sum(idx_trav_u; dims=1)]
@@ -126,7 +130,11 @@ Returns an array where rows correspond to intervals from the first set and
 columns correspond to intervals from the second set. I.e. the value at
 index `2,3` corresponds `simf(intervals1[2], intervals2[3])`.
 """
-function similarities_pairwise(intervals1, intervals2; simf=subsethood_mean)
+function similarities_pairwise(
+    intervals1::AbstractVector{Interval},
+    intervals2::AbstractVector{Interval};
+    simf::Function=subsethood_mean,
+)
     K1 = length(intervals1)
     K2 = length(intervals2)
 
@@ -139,7 +147,11 @@ function similarities_pairwise(intervals1, intervals2; simf=subsethood_mean)
     return similarity
 end
 
-function idx_mapping(intervals1, intervals2; simf=subsethood_mean)
+function idx_mapping(
+    intervals1::AbstractVector{Interval},
+    intervals2::AbstractVector{Interval};
+    simf::Function=subsethood_mean,
+)
     sims_pairwise = similarities_pairwise(intervals1, intervals2; simf=simf)
     return idx_mapping(sims_pairwise)
 end
@@ -153,9 +165,9 @@ The two unidirectional mappings (with respect to the similarity metric given as
 `simf`) between the two sets of intervals.
 """
 function mappings(
-    intervals1::Vector{Interval},
-    intervals2::Vector{Interval};
-    simf=subsethood_mean,
+    intervals1::AbstractVector{Interval},
+    intervals2::AbstractVector{Interval};
+    simf::Function=subsethood_mean,
 )
     idx1to2, idx2to1 = idx_mapping(intervals1, intervals2; simf=simf)
     return mappings(idx1to2, idx2to1)
@@ -165,8 +177,8 @@ end
 Transforms the two cartesian indices into dictionaries.
 """
 function mappings(
-    idx1to2::Matrix{CartesianIndex{2}},
-    idx2to1::Matrix{CartesianIndex{2}},
+    idx1to2::AbstractMatrix{CartesianIndex{2}},
+    idx2to1::AbstractMatrix{CartesianIndex{2}},
 )
     dict1to2 = Dict(Tuple.(idx1to2))
     # We have to “transpose” the second index before creating the dictionary
@@ -175,7 +187,11 @@ function mappings(
     return dict1to2, dict2to1
 end
 
-function similarities(intervals1, intervals2; simf=subsethood_mean)
+function similarities(
+    intervals1::AbstractVector{Interval},
+    intervals2::AbstractVector{Interval};
+    simf::Function=subsethood_mean,
+)
     sims_pairwise = similarities_pairwise(intervals1, intervals2; simf=simf)
     return similarities(sims_pairwise)
 end
@@ -185,7 +201,11 @@ function similarities(sims_pairwise)
     return sum(sims_pairwise[idx1to2]), sum(sims_pairwise[idx2to1])
 end
 
-function similarity(intervals1, intervals2; simf=subsethood_mean)
+function similarity(
+    intervals1::AbstractVector{Interval},
+    intervals2::AbstractVector{Interval};
+    simf::Function=subsethood_mean,
+)
     return sum(similarities(intervals1, intervals2; simf=simf))
 end
 
@@ -193,7 +213,11 @@ function similarity(sims_pairwise)
     return sum(similarities(sims_pairwise))
 end
 
-function similarity_max(intervals1, intervals2; simf=subsethood_mean)
+function similarity_max(
+    intervals1::AbstractVector{Interval},
+    intervals2::AbstractVector{Interval};
+    simf::Function=subsethood_mean,
+)
     if simf == subsethood_mean
         # The maximum similarity between two intervals is 1.0. Since we compare
         # all pairwise (in both directions), we simply have to sum the sizes of
