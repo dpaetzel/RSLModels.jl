@@ -139,8 +139,9 @@ function similarities_pairwise(
     K2 = length(intervals2)
 
     similarity = fill(-1.0, (K1, K2))
-    for i1 in 1:K1
-        for i2 in 1:K2
+    # In Julia, should try to iterate over columns first for better performance.
+    for i2 in 1:K2
+        for i1 in 1:K1
             similarity[i1, i2] = simf(intervals1[i1], intervals2[i2])
         end
     end
