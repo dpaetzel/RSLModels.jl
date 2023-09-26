@@ -213,8 +213,22 @@ function draw_interval(
     x_min=X_MIN,
     x_max=X_MAX,
 )
+    if dims <= 1
+        spreads = draw_spreads(
+            rng,
+            dims,
+            spread_min;
+            spread_max=spread_max,
+            x_min=x_min,
+            x_max=x_max,
+        )
+        centers = draw_centers(rng, spreads)
+        return Interval(centers - spreads, centers + spreads)
+    end
+
     spreads = draw_spreads(
         rng,
+        # At this point we know that dims > 1.
         dims - 1,
         spread_min;
         spread_max=spread_max,
