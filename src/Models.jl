@@ -62,13 +62,16 @@ function draw_model(
     conditions = draw_intervals(
         rng,
         dims,
-        n_components;
+        # Leave space for a default rule.
+        n_components - 1;
         spread_min=spread_min,
         spread_max=spread_max,
         x_min=x_min,
         x_max=x_max,
         volume_min=volume_min,
     )
+    # Append the default rule. `push!` is faster than other things I tried.
+    push!(conditions, maxgeneral(dims; x_min=x_min, x_max=x_max))
     local_models = [draw_constantmodel(rng) for _ in 1:n_components]
 
     return Model(conditions, local_models; x_min=x_min, x_max=x_max)
