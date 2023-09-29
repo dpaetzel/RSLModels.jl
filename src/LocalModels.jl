@@ -5,7 +5,8 @@ using LinearAlgebra
 using Random
 using StatsBase
 
-export ConstantModel, draw_constantmodel, output
+export ConstantModel,
+    draw_constantmodel, mixing, mix, output, output_mean, output_variance
 
 struct ConstantModel
     coef::Real
@@ -72,50 +73,125 @@ function output(rng::AbstractRNG, model::ConstantModel)
     return model.coef + rand(rng, model.dist_noise)
 end
 
-"""
-Assumes that all the given models are responsible (i.e. mixes all of them; i.e.
-an all-ones matching matrix).
-"""
-function output(models::AbstractVector{ConstantModel})
-    return output(Random.default_rng(), models)
+# Predicting with a constant model for several inputs does not depend on the
+# inputs themselves but only on the number of them. We nevertheless provide `X`
+# fully here for abstraction reasons (e.g. if we add another kind of local model
+# that actually does depend on the inputs).
+function output(model::ConstantModel, X::AbstractMatrix{Float64})
+    return output(Random.default_rng(), model, X)
+end
+
+function output(
+    rng::AbstractRNG,
+    model::ConstantModel,
+    X::AbstractMatrix{Float64},
+)
+    return [output(rng, model) for _ in 1:size(X, 1)]
 end
 
 function output(
     models::AbstractVector{ConstantModel},
-    matching_matrix::AbstractMatrix,
+    X::AbstractMatrix{Float64},
+    matching_matrix::AbstractMatrix{Bool},
 )
-    return output(
-        Random.default_rng(),
-        models;
-        matching_matrix=matching_matrix,
-    )
-end
-
-"""
-Assumes that all the given models are responsible (i.e. mixes all of them; i.e.
-an all-ones matching matrix).
-"""
-function output(rng::AbstractRNG, models::AbstractVector{ConstantModel})
-    outs = map(model -> output(rng, model), models)
-    coefs_mix = map(model -> model.coef_mix, models)
-    mixing = coefs_mix ./ sum(coefs_mix)
-    return vec(sum(mixing .* outs))
+    return output(Random.default_rng(), models, X, matching_matrix)
 end
 
 function output(
     rng::AbstractRNG,
     models::AbstractVector{ConstantModel},
-    matching_matrix::AbstractMatrix,
+    X::AbstractMatrix{Float64},
+    matching_matrix::AbstractMatrix{Bool},
 )
-    outs = map(model -> output(rng, model), models)
+    outs = hcat(map(model -> output(rng, model, X), models)...)
+    return mix(models, outs, matching_matrix)
+end
+
+function output_mean(model::ConstantModel, X::AbstractMatrix{Float64})
+    return repeat([model.coef], size(X, 1))
+end
+
+function output_mean(
+    models::AbstractVector{ConstantModel},
+    X::AbstractMatrix{Float64},
+)
+    return hcat(map(model -> output_mean(model, X), models)...)
+end
+
+function output_mean(
+    models::AbstractVector{ConstantModel},
+    X::AbstractMatrix{Float64},
+    matching_matrix::AbstractMatrix{Bool},
+)
+    # TODO Consider to abstract from `output_mean` vs `output` (only difference
+    # to `output`)
+    outs = output_mean(models, X)
+    return mix(models, outs, matching_matrix)
+end
+
+function output_variance(model::ConstantModel, X::AbstractMatrix{Float64})
+    return repeat([model.dist_noise.σ], size(X, 1))
+end
+
+function output_variance(
+    models::AbstractVector{ConstantModel},
+    X::AbstractMatrix{Float64},
+    matching_matrix::AbstractMatrix{Bool},
+)
+    vars = [m.dist_noise.σ for m in models]
+    mix = mixing(models, matching_matrix)
+    return vec(sum(vars' .* mix .^ 2; dims=2))
+end
+
+"""
+Check the matching matrix for all data points being matched by at least one
+rule.
+"""
+function check_matching_matrix(matching_matrix::AbstractMatrix{Bool})
+    # Check whether any row is all zeroes.
+    if any(sum(matching_matrix; dims=2) .== 0)
+        println(matching_matrix)
+        error("some samples are unmatched, add a default rule")
+    end
+end
+
+"""
+Compute a mixing weight for each local model for each data point.
+"""
+function mixing(
+    models::AbstractVector{ConstantModel},
+    matching_matrix::AbstractMatrix{Bool},
+)
+    check_matching_matrix(matching_matrix)
+
     coefs_mix = map(model -> model.coef_mix, models)
     coefs_mix = coefs_mix' .* matching_matrix
-    mixing = coefs_mix ./ sum(coefs_mix)
+
+    # Mixing coefficients are allowed to be `Inf` but these cases need to be
+    # handled properly. If at least one of the mixing coefficients is `Inf`, we
+    # set all non-`Inf` mixing coefficients to 0.0 and all `Inf`s to 1.0. This
+    # yields equal mixing between the rules with `Inf`s.
+    for row in eachrow(coefs_mix)
+        if any(isinf.(row))
+            row[(!).(isinf.(row))] .= 0.0
+            row[isinf.(row)] .= 1.0
+        end
+    end
+
+    return coefs_mix ./ sum(coefs_mix; dims=2)
+end
+
+function mix(
+    models::AbstractVector{ConstantModel},
+    outputs::AbstractMatrix{Float64},
+    matching_matrix::AbstractMatrix{Bool},
+)
+
     # The first dimension of the matching matrix (and therefore of the
     # data structure that this results in) is the dimension of the number of
     # input data points. The second dimension are the models, therefore sum over
     # the second dimension.
-    return vec(sum(outs' .* mixing; dims=2))
+    return vec(sum(outputs .* mixing(models, matching_matrix); dims=2))
 end
 
 end
