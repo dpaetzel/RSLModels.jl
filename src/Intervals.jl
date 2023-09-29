@@ -258,7 +258,9 @@ function draw_interval(
         volume_min / volume(; centers=centers, spreads=spreads),
     )
 
-    # TODO Put a check here for spread_max not conflicting with our “fix the last dimension thing”
+    if width_min >= 2 * spread_max
+        error("spread_max set too low for given volume_min")
+    end
 
     width_max = x_max - x_min
 
