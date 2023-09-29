@@ -12,6 +12,7 @@ export Interval,
     elemof,
     hull,
     intersection,
+    maxgeneral,
     mutate,
     plot_interval,
     volume
@@ -110,6 +111,13 @@ function volume(; centers, spreads)
     # representation.
     interval = Interval(centers - spreads, centers + spreads)
     return volume(interval)
+end
+
+"""
+The maximally general interval for the given dimensions.
+"""
+function maxgeneral(dims::Integer; x_min=X_MIN, x_max=X_MAX)
+    return Interval(repeat([x_min], dims), repeat([x_max], dims))
 end
 
 # NOTE Dimension should actually be unsigned but I don't see how to achieve that

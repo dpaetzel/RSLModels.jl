@@ -11,13 +11,36 @@ struct ConstantModel
     coef::Real
     dist_noise::Distribution
     coef_mix::Real
+    # Whether this is a default rule (and should thus not undergo mixing
+    # coefficient fixing).
+    isdefault::Bool
+    function ConstantModel(
+        coef::Real,
+        dist_noise::Distribution,
+        coef_mix::Real,
+        # Whether this is a default rule (and should thus not undergo mixing
+        # coefficient fixing).
+        isdefault::Bool,
+    )
+        return new(coef, dist_noise, coef_mix, isdefault)
+    end
+    function ConstantModel(
+        coef::Real,
+        dist_noise::Distribution,
+        coef_mix::Real;
+        # Whether this is a default rule (and should thus not undergo mixing
+        # coefficient fixing).
+        isdefault::Bool=false,
+    )
+        return new(coef, dist_noise, coef_mix, isdefault)
+    end
 end
 
-function draw_constantmodel()
-    return draw_constantmodel(Random.default_rng())
+function draw_constantmodel(isdefault::Bool=false)
+    return draw_constantmodel(Random.default_rng(); isdefault=isdefault)
 end
 
-function draw_constantmodel(rng::AbstractRNG)
+function draw_constantmodel(rng::AbstractRNG; isdefault::Bool=false)
     coef = rand(rng, Uniform(0.0, 1.0))
 
     # TODO Derive more sensible and less arbitrary min and max noise values,
@@ -25,8 +48,19 @@ function draw_constantmodel(rng::AbstractRNG)
     std_noise_min = 0.001
     std_noise = rand(rng, Uniform(std_noise_min, 0.2))
     # TODO Consider to fix coef_mix based on other rules
-    coef_mix = rand(rng, Uniform(0.0, 1.0))
-    return ConstantModel(coef, Normal(0.0, std_noise), coef_mix)
+    if isdefault
+        # If this is a default rule, set its mixing weight to the smallest
+        # positive number.
+        coef_mix = nextfloat(0.0)
+    else
+        coef_mix = rand(rng, Uniform(std_noise, 1.0))
+    end
+    return ConstantModel(
+        coef,
+        Normal(0.0, std_noise),
+        coef_mix;
+        isdefault=isdefault,
+    )
 end
 
 function output(model::ConstantModel)

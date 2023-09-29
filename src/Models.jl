@@ -70,9 +70,11 @@ function draw_model(
         x_max=x_max,
         volume_min=volume_min,
     )
+    local_models = [draw_constantmodel(rng) for _ in 1:(n_components - 1)]
+
     # Append the default rule. `push!` is faster than other things I tried.
     push!(conditions, maxgeneral(dims; x_min=x_min, x_max=x_max))
-    local_models = [draw_constantmodel(rng) for _ in 1:n_components]
+    push!(local_models, draw_constantmodel(rng; isdefault=true))
 
     return Model(conditions, local_models; x_min=x_min, x_max=x_max)
 end
