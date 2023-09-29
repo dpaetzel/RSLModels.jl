@@ -54,7 +54,7 @@ function draw_constantmodel(rng::AbstractRNG; isdefault::Bool=false)
         # positive number.
         coef_mix = nextfloat(0.0)
     else
-        coef_mix = rand(rng, Uniform(std_noise, 1.0))
+        coef_mix = 1.0 / rand(rng, Uniform(std_noise, 1.0))
     end
     return ConstantModel(
         coef,
