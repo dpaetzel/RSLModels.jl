@@ -45,6 +45,10 @@ struct Interval
     end
 end
 
+function elemof(x, nothing)
+    return false
+end
+
 function elemof(x::AbstractVector{Float64}, interval::Interval)
     # This has been made enormously ugly by the fact that I need to allow for
     # closed/open options at the bound level.
@@ -86,6 +90,10 @@ function elemof(
         matching_matrix[:, i] = elemof(X, intervals[i])
     end
     return matching_matrix
+end
+
+function volume(nothing)
+    return 0
 end
 
 # The volume of input space.
