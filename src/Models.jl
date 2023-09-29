@@ -115,4 +115,38 @@ function draw_data(rng::AbstractRNG, model::Model, n)
     return X, y
 end
 
+function LocalModels.output(
+    model::Model,
+    X::AbstractMatrix{Float64},
+    matching_matrix::AbstractMatrix{Bool},
+)
+    return output(model.local_models, X, matching_matrix)
+end
+
+function LocalModels.output_mean(
+    model::Model,
+    X::AbstractMatrix{Float64},
+    matching_matrix::AbstractMatrix{Bool},
+)
+    return output_mean(model.local_models, X, matching_matrix)
+end
+
+function LocalModels.output_mean(model::Model, X::AbstractMatrix{Float64})
+    matching_matrix = match(model, X)
+    return output_mean(model.local_models, X, matching_matrix)
+end
+
+function LocalModels.output_variance(model::Model, X::AbstractMatrix{Float64})
+    matching_matrix = match(model, X)
+    return output_variance(model.local_models, X, matching_matrix)
+end
+
+function LocalModels.output_variance(
+    model::Model,
+    X::AbstractMatrix{Float64},
+    matching_matrix::AbstractMatrix{Bool},
+)
+    return output_variance(model.local_models, X, matching_matrix)
+end
+
 end
