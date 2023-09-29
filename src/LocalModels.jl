@@ -64,6 +64,8 @@ function draw_constantmodel(rng::AbstractRNG; isdefault::Bool=false)
     )
 end
 
+# The output at a certain point is independent of the input because of the model
+# being constant.
 function output(model::ConstantModel)
     return output(Random.default_rng(), model)
 end
