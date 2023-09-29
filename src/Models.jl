@@ -110,7 +110,7 @@ function draw_data(rng::AbstractRNG, model::Model, n)
         x_max=model.x_max,
     )
     matching_matrix = match(model, X)
-    y = output(rng, model.local_models, matching_matrix)
+    y = output(rng, model.local_models, X, matching_matrix)
 
     return X, y
 end
