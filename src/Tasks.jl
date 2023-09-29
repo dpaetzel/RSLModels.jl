@@ -1,6 +1,8 @@
 module Tasks
 
+using NPZ
 using Random
+using Serialization
 
 using ..Intervals
 using ..Models
