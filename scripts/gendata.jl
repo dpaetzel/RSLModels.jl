@@ -1,5 +1,6 @@
 using Base.Filesystem
 using Comonicon
+using ProgressBars
 
 using RSLModels.Tasks
 
@@ -53,6 +54,35 @@ and the sample to disk.
 )
     for seed in startseed:endseed
         gen(; d=d, k=k, n=n, seed=seed, prefix_fname="$prefix_fname-$seed")
+    end
+end
+
+"""
+Generate All The Tasks per seed in the given range and sample them, then write
+the task and the sample to disk.
+
+# Options
+
+- `--startseed`:
+- `--endseed`:
+- `--prefix-fname`:
+"""
+@cast function genall(; startseed::Int=0, endseed::Int=9)
+    for (seed, d, k) in ProgressBar(
+        Iterators.product(
+            startseed:endseed,
+            [1, 2, 3, 5, 10, 20],
+            [2, 4, 7, 10, 15, 20],
+        ),
+    )
+        n = Int(round(200 * 10^(d / 5)))
+        gen(;
+            d=d,
+            k=k,
+            n=n,
+            seed=seed,
+            prefix_fname="data/genall/$d-$k-$n-$seed",
+        )
     end
 end
 
