@@ -19,6 +19,7 @@ struct Task
     y::AbstractVector
     X_test::AbstractMatrix
     y_test::AbstractVector
+    match_X::AbstractMatrix
 end
 
 function Intervals.dimensions(task::Task)
@@ -61,8 +62,9 @@ function generate(
     )
     X, y = draw_data(rng, model, n_train)
     X_test, y_test = draw_data(rng, model, n_test)
+    match_X = Models.match(model, X)
 
-    return Task(seed, model, X, y, X_test, y_test)
+    return Task(seed, model, X, y, X_test, y_test, match_X)
 end
 
 # For now, we write the training and test data to an NPZ file as well (in
