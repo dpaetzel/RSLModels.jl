@@ -23,7 +23,7 @@
               # https://devenv.sh/reference/options/
               languages.python.enable = true;
               languages.python.package =
-                pkgs.python310.withPackages (ps: [ ps.matplotlib ]);
+                pkgs.python310.withPackages (ps: [ ps.matplotlib ps.mlflow ]);
 
               languages.julia.enable = true;
             }];
