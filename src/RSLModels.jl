@@ -9,8 +9,8 @@ using StatsBase
 include("Intervals.jl")
 include("LocalModels.jl")
 include("Models.jl")
-include("Tasks.jl")
-
 include("Scores.jl")
+include("Tasks.jl")
+include("Utils.jl")
 
 end
