@@ -1,7 +1,9 @@
 using Base.Filesystem
 using Comonicon
 using ProgressBars
+using Statistics
 
+using RSLModels.LocalModels
 using RSLModels.Tasks
 using RSLModels.Utils
 
@@ -25,16 +27,23 @@ the learning tasks to disk.
     seed::Int=0,
     prefix_fname::String="data/$d-$k-$n-$seed",
 )
+    params = Dict(:d => d, :k => k, :seed => seed)
     task = generate(d, k, n; seed=seed)
     match_X = task.match_X
 
+    y_pred = output_mean(task.model, task.X)
+    y_test_pred = output_mean(task.model, task.X_test)
     stats = Dict(
+        # TODO Consider to also add linearity
         :coverage => data_coverage(match_X),
         :overlap => data_overlap_pairs_mean(match_X),
+        :mae_train => mean(abs.(task.y .- y_pred)),
+        :mae_test => mean(abs.(task.y_test .- y_test_pred)),
     )
 
     # TODO Mlflow here
     println("$d $k $n $seed => $stats")
+    # TODO Consider to store model (but not generated data)
 
     return nothing
 end
