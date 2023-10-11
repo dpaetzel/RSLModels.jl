@@ -1,6 +1,12 @@
 module Utils
 
-export data_coverage, data_overlap_mean_norm, data_overlap_pairs_mean
+export data_coverage,
+    data_overlaps,
+    data_overlap_pairs,
+    data_overlap_mean_norm,
+    data_overlap_pairs_mean,
+    data_overlap_pairs_mean_per_rule,
+    data_overlap_pairs_mean_per_ruleset
 
 """
 Assumes that the last column of the matching matrix is all-ones due to being a
@@ -43,8 +49,9 @@ Mean rate (of all data points) of pairwise overlapping data points per rule.
 function data_overlap_pairs_mean_per_rule(
     matching_matrix::AbstractMatrix{Bool},
 )
+    # Have to remove the default rule in the denominator hence the -1.
     return data_overlap_pairs_mean_per_ruleset(matching_matrix) /
-           size(matching_matrix, 2)
+           (size(matching_matrix, 2) - 1)
 end
 
 function data_overlap_mean_norm(matching_matrix::AbstractMatrix{Bool})
