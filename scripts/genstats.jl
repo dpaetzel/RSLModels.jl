@@ -4,6 +4,7 @@ using ProgressBars
 using Serialization
 using Statistics
 
+using RSLModels.Intervals
 using RSLModels.LocalModels
 using RSLModels.Tasks
 using RSLModels.Utils
@@ -19,14 +20,16 @@ the learning tasks to disk.
 - `--k, -k`:
 - `--n, -n`:
 - `--seed`:
+- `--spread-min-factor`:
 - `--prefix-fname`:
 """
 @cast function gen(;
     d::Int=1,
     k::Int=3,
     n::Int=200,
+    spread_min_factor=0.5,
     seed::Int=0,
-    prefix_fname::String="data/$d-$k-$n-$seed",
+    prefix_fname::String="data/$d-$k-$n-$spread_min_factor-$seed",
     pbar=missing,
 )
     if ismissing(pbar)
@@ -35,8 +38,26 @@ the learning tasks to disk.
         myprintln = s -> println(pbar, s)
     end
 
-    params = Dict(:d => d, :k => k, :seed => seed)
-    task = generate(d, k, n; seed=seed)
+    spread_min = spread_min_factor * Intervals.spread_ideal_cubes(d, k)
+    volume_min = spread_min_factor^d * Intervals.volume_min_factor(d, k)
+
+    params = Dict(
+        :d => d,
+        :k => k,
+        :spread_min => spread_min,
+        :volume_min => volume_min,
+        :seed => seed,
+    )
+    task = generate(
+        d,
+        k,
+        n;
+        seed=seed,
+        spread_min=spread_min,
+        # If I take 0.5 of the width, I have to take 0.5^DX of the volume.
+        # TODO Consider to set volume_min_factor individually
+        volume_min=volume_min,
+    )
     match_X = task.match_X
 
     y_pred = output_mean(task.model, task.X)
@@ -71,6 +92,7 @@ and the sample to disk.
 - `--d, -d`:
 - `--k, -k`:
 - `--n, -n`:
+- `--spread-min-factor`:
 - `--startseed`:
 - `--endseed`:
 - `--prefix-fname`:
@@ -79,12 +101,20 @@ and the sample to disk.
     d::Int=1,
     k::Int=3,
     n::Int=200,
+    spread_min_factor=0.5,
     startseed::Int=0,
     endseed::Int=9,
-    prefix_fname::String="data/$d-$k-$n",
+    prefix_fname::String="data/$d-$k-$n-$spread_min_factor",
 )
     for seed in startseed:endseed
-        gen(; d=d, k=k, n=n, seed=seed, prefix_fname="$prefix_fname-$seed")
+        gen(;
+            d=d,
+            k=k,
+            n=n,
+            spread_min_factor=spread_min_factor,
+            seed=seed,
+            prefix_fname="$prefix_fname-$seed",
+        )
     end
 end
 
@@ -94,11 +124,13 @@ the task and the sample to disk.
 
 # Options
 
+- `--spread-min-factor`:
 - `--startseed`:
 - `--endseed`:
 - `--prefix-fname`:
 """
 @cast function genall(;
+    spread_min_factor=0.5,
     startseed::Int=0,
     endseed::Int=9,
     prefix_fname::String="data/genstats/genall",
@@ -117,7 +149,8 @@ the task and the sample to disk.
             k=k,
             n=n,
             seed=seed,
-            prefix_fname="$prefix_fname/$d-$k-$n-$seed",
+            spread_min_factor=spread_min_factor,
+            prefix_fname="$prefix_fname/$d-$k-$n-$spread_min_factor-$seed",
             pbar=iter,
         )
     end
