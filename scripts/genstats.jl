@@ -1,5 +1,7 @@
 using Base.Filesystem
 using Comonicon
+using MLJ
+using MLJLinearModels
 using ProgressBars
 using Serialization
 using Statistics
@@ -8,6 +10,8 @@ using RSLModels.Intervals
 using RSLModels.LocalModels
 using RSLModels.Tasks
 using RSLModels.Utils
+
+RidgeRegressor = @load RidgeRegressor pkg = MLJLinearModels
 
 """
 Generate a single learning task and compute learning task statistics for it.
@@ -44,6 +48,7 @@ the learning tasks to disk.
     params = Dict(
         :d => d,
         :k => k,
+        :n => n,
         :spread_min => spread_min,
         :volume_min => volume_min,
         :seed => seed,
@@ -52,22 +57,29 @@ the learning tasks to disk.
         d,
         k,
         n;
-        seed=seed,
         spread_min=spread_min,
         # If I take 0.5 of the width, I have to take 0.5^DX of the volume.
         # TODO Consider to set volume_min_factor individually
         volume_min=volume_min,
+        seed=seed,
     )
     match_X = task.match_X
 
     y_pred = output_mean(task.model, task.X)
     y_test_pred = output_mean(task.model, task.X_test)
+
+    mach = machine(RidgeRegressor(), MLJ.table(task.X), task.y)
+    fit!(mach)
+    y_test_pred = MLJ.predict(mach, table(task.X_test))
+    mae_test_linear = mae(y_test_pred, task.y_test)
+
     stats = Dict(
         # TODO Consider to also add linearity
         :coverage => data_coverage(match_X),
         :overlap => data_overlap_pairs_mean(match_X),
         :mae_train => mean(abs.(task.y .- y_pred)),
         :mae_test => mean(abs.(task.y_test .- y_test_pred)),
+        :mae_test_linear => mae_test_linear,
     )
 
     data = Dict(:params => params, :stats => stats)
