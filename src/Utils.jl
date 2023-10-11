@@ -25,10 +25,26 @@ function data_overlap_pairs(matching_matrix::AbstractMatrix{Bool})
     return binomial.(count_overlap, 2)
 end
 
-function data_overlap_pairs_mean(matching_matrix::AbstractMatrix{Bool})
+"""
+Mean rate (of all data points) of pairwise overlapping data points in the rule
+set.
+"""
+function data_overlap_pairs_mean_per_ruleset(
+    matching_matrix::AbstractMatrix{Bool},
+)
     overlap_pairs = data_overlap_pairs(matching_matrix)
 
     return sum(overlap_pairs) / size(matching_matrix, 1)
+end
+
+"""
+Mean rate (of all data points) of pairwise overlapping data points per rule.
+"""
+function data_overlap_pairs_mean_per_rule(
+    matching_matrix::AbstractMatrix{Bool},
+)
+    return data_overlap_pairs_mean_per_ruleset(matching_matrix) /
+           size(matching_matrix, 2)
 end
 
 function data_overlap_mean_norm(matching_matrix::AbstractMatrix{Bool})

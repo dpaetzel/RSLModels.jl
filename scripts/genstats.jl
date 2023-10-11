@@ -76,7 +76,7 @@ the learning tasks to disk.
     stats = Dict(
         # TODO Consider to also add linearity
         :coverage => data_coverage(match_X),
-        :overlap => data_overlap_pairs_mean(match_X),
+        :overlap => data_overlap_pairs_mean_per_rule(match_X),
         :mae_train => mean(abs.(task.y .- y_pred)),
         :mae_test => mean(abs.(task.y_test .- y_test_pred)),
         :mae_test_linear => mae_test_linear,
