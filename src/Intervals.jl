@@ -138,24 +138,26 @@ end
 # NOTE Dimension should actually be unsigned but I don't see how to achieve that
 # cleanly right now (i.e. without having to do `unsigned(10)` or `0xa` or
 # similar).
-function draw_spreads(
+function draw_spread(
     dims::Integer,
     spread_min;
     spread_max=Inf,
     x_min=X_MIN,
     x_max=X_MAX,
+    uniform=false,
 )
-    return draw_spreads(
+    return draw_spread(
         Random.default_rng(),
         dims,
         spread_min;
         spread_max=spread_max,
         x_min=x_min,
         x_max=x_max,
+        uniform=uniform,
     )
 end
 
-function draw_spreads(
+function draw_spread(
     rng::AbstractRNG,
     dims::Integer,
     spread_min;
@@ -180,53 +182,81 @@ function draw_spreads(
     return spread_min .+ rates_spread .* (spread_max - spread_min)
 end
 
-function draw_centers(spread; x_min=X_MIN, x_max=X_MAX)
-    return draw_centers(Random.default_rng(), spread; x_min=x_min, x_max=x_max)
+"""
+Given a data point `x` and a spread (and space boundaries), the lower bound of
+the range of viable interval centers such that the interval [center - spread,
+center + spread] does not violate the space constraints and contains `x`.
+"""
+function lbound_center(x, spread; x_min=Intervals.X_MIN, x_max=Intervals.X_MAX)
+    return max(x - spread, x_min + spread)
 end
 
-function draw_centers(rng::AbstractRNG, spread::Real; x_min=X_MIN, x_max=X_MAX)
-    lbound = x_min + spread
-    ubound = x_max - spread
-    if lbound == ubound
-        lbound
-    elseif lbound >= ubound
-        throw(
-            ArgumentError(
-                "the condition `spread <= (x_min - x_max) / 2` is not satisfied",
-            ),
-        )
-    else
-        rand(rng, Uniform(x_min + spread, x_max - spread))
-    end
+"""
+Given a data point `x` and a spread (and space boundaries), the upper bound of
+the range of viable interval centers such that the interval [center - spread,
+center + spread] does not violate the space constraints and contains `x`.
+"""
+function ubound_center(x, spread; x_min=Intervals.X_MIN, x_max=Intervals.X_MAX)
+    return min(x + spread, x_max - spread)
+end
+
+function draw_center(x, spread; x_min=X_MIN, x_max=X_MAX)
+    return draw_center(
+        Random.default_rng(),
+        x,
+        spread;
+        x_min=x_min,
+        x_max=x_max,
+    )
+end
+
+function draw_center(
+    rng::AbstractRNG,
+    x::Float64,
+    spread::Float64;
+    x_min=X_MIN,
+    x_max=X_MAX,
+)
+    # The spread defines an interval around `x` from which we can draw a center
+    # such that `x` is still matched.
+    lb_center = lbound_center(x, spread; x_min=x_min, x_max=x_max)
+    ub_center = ubound_center(x, spread; x_min=x_min, x_max=x_max)
+
+    # We next draw a rate.
+    rate_center = rand(rng)
+
+    # Then we convert this rate into a center.
+    return lb_center + rate_center * (ub_center - lb_center)
 end
 
 # NOTE We cannot write `Vector{Real}` here because in Julia it does NOT follow
 # from `T1 <: T2` that `T{T1} <: T{T2}`. Instead, we write `Vector` for which we
 # have `Vector{T} <: Vector` for all `T`.
-function draw_centers(
+function draw_center(
     rng::AbstractRNG,
+    x::AbstractVector{Float64},
     spread::AbstractVector{Float64};
     x_min=X_MIN,
     x_max=X_MAX,
 )
     # Simply draw an independent spread for each dimension.
-    return [draw_centers(rng, s; x_min=x_min, x_max=x_max) for s in spread]
+    return draw_center.(rng, x, spread; x_min=x_min, x_max=x_max)
 end
 
 function draw_interval(
-    dims::Integer,
-    spread_min,
-    volume_min;
+    x::Vector{Float64},
+    spread_min;
     spread_max=Inf,
+    uniform_spread=true,
     x_min=X_MIN,
     x_max=X_MAX,
 )
     return draw_interval(
         Random.default_rng(),
-        dims,
-        spread_min,
-        volume_min;
+        x,
+        spread_min;
         spread_max=spread_max,
+        uniform_spread=uniform_spread,
         x_min=x_min,
         x_max=x_max,
     )
@@ -234,128 +264,53 @@ end
 
 function draw_interval(
     rng::AbstractRNG,
-    dims::Integer,
-    spread_min,
-    volume_min;
+    x::Vector{Float64},
+    spread_min;
     spread_max=Inf,
+    uniform_spread=true,
     x_min=X_MIN,
     x_max=X_MAX,
 )
-    if dims <= 1
-        spreads = draw_spreads(
-            rng,
-            dims,
-            spread_min;
-            spread_max=spread_max,
-            x_min=x_min,
-            x_max=x_max,
-        )
-        centers = draw_centers(rng, spreads)
-        return Interval(centers - spreads, centers + spreads)
-    end
-
-    spreads = draw_spreads(
+    dims = size(x, 1)
+    spread = draw_spread(
         rng,
-        # At this point we know that dims > 1.
-        dims - 1,
+        dims,
         spread_min;
         spread_max=spread_max,
+        uniform=uniform_spread,
         x_min=x_min,
         x_max=x_max,
     )
-    centers = draw_centers(rng, spreads)
+    center = draw_center(rng, x, spread; x_min=x_min, x_max=x_max)
 
-    width_min = max(
-        spread_min * 2,
-        volume_min / volume(; centers=centers, spreads=spreads),
-    )
-
-    if width_min >= 2 * spread_max
-        error("spread_max set too low for given volume_min")
-    end
-
-    width_max = x_max - x_min
-
-    iter_max = 20
-    iter = 0
-    # For high dimensions, we often have `width_min > width_max`. We re-draw the
-    # smallest spread until `width_min` is small enough.
-    while width_min > width_max && iter < iter_max
-        iter += 1
-        println(
-            "Rejecting due to min width greater max width " *
-            "($width_min > $width_max).",
-        )
-        # Start by getting the smallest spread's index.
-        i = argmin(spreads)
-        # Draw a new spread (and based on that, a center) and replace the
-        # smallest spread (and the corresponding center).
-        # TODO Consider to overload draw_spread so we don't need to extract here
-        spreads[i] = draw_spreads(
-            rng,
-            1,
-            spread_min;
-            spread_max=spread_max,
-            x_min=x_min,
-            x_max=x_max,
-        )[1]
-        l = x_min + spreads[i]
-        u = x_max - spreads[i]
-        centers[i] = draw_centers(rng, spreads[i])[1]
-
-        width_min = volume_min / volume(; centers=centers, spreads=spreads)
-    end
-
-    if iter >= iter_max
-        error("Had to reject too many generated intervals, aborting.")
-    end
-
-    # Finally, we may draw a random width for the last dimension.
-    width_last = if width_min == width_max
-        width_min
-        # At this point we can be sure that width_min < width_max.
-    else
-        rand(rng, Uniform(width_min, width_max))
-    end
-
-    # Compute the spread of the last dimension.
-    spread_last = width_last / 2
-
-    # Draw the center for the last dimension.
-    center_last = draw_centers(rng, spread_last)
-
-    # Insert the last center and spread at a random index so that there's no
-    # weird bias towards the last dimension.
-    i_rand = rand(rng, 1:dims)
-    insert!(spreads, i_rand, spread_last)
-    insert!(centers, i_rand, center_last)
-
-    return Interval(centers - spreads, centers + spreads)
+    return Interval(center - spread, center + spread)
 end
 
 function draw_intervals(
-    dims::Integer,
-    n_intervals;
-    spread_min=spread_ideal_cubes(dims, n_intervals),
-    spread_max=Inf,
-    x_min=X_MIN,
-    x_max=X_MAX,
-    volume_min=Intervals.volume_min_factor(
+    dims::Integer;
+    n_intervals_fantasy=20,
+    spread_min::Float64=Intervals.spread_ideal_cubes(
         dims,
-        n_intervals;
-        x_min=x_min,
-        x_max=x_max,
+        n_intervals_fantasy,
     ),
+    spread_max::Float64=Inf,
+    uniform_spread::Bool=true,
+    rate_coverage_min::Float64=0.8,
+    n::Int=Int(round(200 * 10^(dims / 5))),
+    x_min=Intervals.X_MIN,
+    x_max=Intervals.X_MAX,
 )
     return draw_intervals(
         Random.default_rng(),
-        dims,
-        n_intervals;
+        dims;
+        n_intervals_fantasy=n_intervals_fantasy,
         spread_min=spread_min,
         spread_max=spread_max,
+        uniform_spread=uniform_spread,
+        rate_coverage_min=rate_coverage_min,
+        n=n,
         x_min=x_min,
         x_max=x_max,
-        volume_min=volume_min,
     )
 end
 
@@ -376,30 +331,47 @@ array, list, list
 """
 function draw_intervals(
     rng::AbstractRNG,
-    dims::Integer,
-    n_intervals;
-    spread_min=spread_ideal_cubes(dims, n_intervals),
-    spread_max=Inf,
-    x_min=X_MIN,
-    x_max=X_MAX,
-    volume_min=Intervals.volume_min_factor(
+    dims::Int;
+    n_intervals_fantasy=20,
+    spread_min::Float64=Intervals.spread_ideal_cubes(
         dims,
-        n_intervals;
-        x_min=x_min,
-        x_max=x_max,
+        n_intervals_fantasy,
     ),
+    spread_max::Float64=Inf,
+    uniform_spread::Bool=true,
+    rate_coverage_min::Float64=0.8,
+    n::Int=Int(round(200 * 10^(dims / 5))),
+    x_min=Intervals.X_MIN,
+    x_max=Intervals.X_MAX,
 )
-    return [
-        draw_interval(
+    X = rand(rng, n, dims) .* (x_max - x_min)
+    matched = fill(false, n)
+    intervals::Vector{Interval} = []
+
+    while count(matched) / n < rate_coverage_min
+        idx = rand(rng, 1:n)
+        x = X[idx, :]
+
+        interval = draw_interval(
             rng,
-            dims,
-            spread_min,
-            volume_min;
+            x,
+            spread_min;
             spread_max=spread_max,
+            uniform_spread=uniform_spread,
             x_min=x_min,
             x_max=x_max,
-        ) for _ in 1:n_intervals
-    ]
+        )
+
+        push!(intervals, interval)
+
+        # Should be faster (due to short-circuiting) than calling `elemof` on
+        # `X`.
+        for i in 1:n
+            matched[i] = matched[i] || elemof(X[i, :], interval)
+        end
+    end
+
+    return intervals
 end
 
 """
