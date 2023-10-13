@@ -45,7 +45,7 @@ struct Interval
     end
 end
 
-function elemof(x, nothing)
+function elemof(x, interval::Nothing)
     return false
 end
 
