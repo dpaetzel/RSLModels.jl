@@ -45,6 +45,13 @@ struct Interval
     end
 end
 
+function Base.clamp(x::Interval, lo::Float64, hi::Float64)
+    return Interval(
+        Base.clamp.(x.lbound, lo, hi),
+        Base.clamp.(x.ubound, lo, hi),
+    )
+end
+
 function elemof(x, interval::Nothing)
     return false
 end
