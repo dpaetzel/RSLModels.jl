@@ -162,6 +162,7 @@ function draw_spreads(
     spread_max=Inf,
     x_min=X_MIN,
     x_max=X_MAX,
+    uniform=false,
 )
     if spread_min > spread_max
         throw(
@@ -170,7 +171,11 @@ function draw_spreads(
             ),
         )
     end
-    rates_spread = rand(rng, dist_spread, dims)
+    if uniform
+        rates_spread = rand(rng, dims)
+    else
+        rates_spread = rand(rng, dist_spread, dims)
+    end
     spread_max = min((x_max - x_min) / 2, spread_max)
     return spread_min .+ rates_spread .* (spread_max - spread_min)
 end
