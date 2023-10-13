@@ -28,22 +28,16 @@ end
 
 function generate(
     dims::Integer,
-    n_components,
-    n_train;
+    nif::Integer,
+    n_train::Integer;
     n_test=10 * n_train,
     seed::Union{Nothing,Integer}=nothing,
     # Note that these are the same default values as the ones given for
     # `Intervals.draw_intervals`.
-    spread_min=Intervals.spread_ideal_cubes(dims, n_components),
+    spread_min=Intervals.spread_ideal_cubes(dims, nif),
     spread_max=Inf,
     x_min=X_MIN,
     x_max=X_MAX,
-    volume_min=Intervals.volume_min_factor(
-        dims,
-        n_components;
-        x_min=x_min,
-        x_max=x_max,
-    ),
 )
     if seed == nothing
         seed = rand(UInt)
@@ -53,12 +47,11 @@ function generate(
     model = draw_model(
         rng,
         dims,
-        n_components;
+        nif;
         spread_min=spread_min,
         spread_max=spread_max,
         x_min=x_min,
         x_max=x_max,
-        volume_min=volume_min,
     )
     X, y = draw_data(rng, model, n_train)
     X_test, y_test = draw_data(rng, model, n_test)

@@ -14,7 +14,7 @@ export Interval,
     intersection,
     maxgeneral,
     mutate,
-    plot_interval,
+    remove_fully_overlapped,
     volume
 
 # We want to track global assignments as well when doing
@@ -288,68 +288,73 @@ end
 
 function draw_intervals(
     dims::Integer;
-    n_intervals_fantasy=20,
-    spread_min::Float64=Intervals.spread_ideal_cubes(
-        dims,
-        n_intervals_fantasy,
-    ),
+    nif=20,
+    spread_min::Float64=Intervals.spread_ideal_cubes(dims, nif),
     spread_max::Float64=Inf,
     uniform_spread::Bool=true,
     rate_coverage_min::Float64=0.8,
-    n::Int=Int(round(200 * 10^(dims / 5))),
+    n_samples::Int=Int(round(200 * 10^(dims / 5))),
+    remove_final_fully_overlapped::Bool=true,
     x_min=Intervals.X_MIN,
     x_max=Intervals.X_MAX,
 )
     return draw_intervals(
         Random.default_rng(),
         dims;
-        n_intervals_fantasy=n_intervals_fantasy,
+        nif=nif,
         spread_min=spread_min,
         spread_max=spread_max,
         uniform_spread=uniform_spread,
         rate_coverage_min=rate_coverage_min,
-        n=n,
+        n_samples=n_samples,
+        remove_final_fully_overlapped=remove_final_fully_overlapped,
         x_min=x_min,
         x_max=x_max,
     )
 end
 
 """
-Parameters
-----------
-dims : int > 0
-n_intervals : int > 0
-volume_min : float > 0
-random_state : np.random.RandomState
+    draw_intervals([rng,] dims; <keyword arguments>)
 
-Returns
--------
-array, list, list
-    The intervals as an array of shape `(n_intervals, 2, dims)`, the
-    set of pair-wise intersections between the intervals, the set of volumes
-    of the non-empty ones of these pair-wise intersections.
+Generate random intervals for `dim` dimensions.
+
+ If no `rng` is provided, use the
+`Random.default_rng()`.
+
+# Arguments
+- `rng::AbstractRNG`:
+- `dims::Int`:
+- `nif`: Stands for `Number of Intervals in my Fantasy`. Reminds me of Nifflers,
+  which are cute.
+- `spread_min::Float64`:
+- `spread_max::Float64`:
+- `uniform_spread::Bool`:
+- `rate_coverage_min::Float64`: [0, 1].
+- `n_samples`:
+- `remove_final_fully_overlapped`:
+- `x_min::Float64`:
+- `x_max::Float64`:
 """
 function draw_intervals(
     rng::AbstractRNG,
     dims::Int;
-    n_intervals_fantasy=20,
-    spread_min::Float64=Intervals.spread_ideal_cubes(
-        dims,
-        n_intervals_fantasy,
-    ),
+    nif=20,
+    spread_min::Float64=Intervals.spread_ideal_cubes(dims, nif),
     spread_max::Float64=Inf,
     uniform_spread::Bool=true,
     rate_coverage_min::Float64=0.8,
-    n::Int=Int(round(200 * 10^(dims / 5))),
+    n_samples::Int=Int(round(200 * 10^(dims / 5))),
+    remove_final_fully_overlapped::Bool=true,
     x_min=Intervals.X_MIN,
     x_max=Intervals.X_MAX,
 )
-    X = rand(rng, n, dims) .* (x_max - x_min)
-    matched = fill(false, n)
+    X = rand(rng, n_samples, dims) .* (x_max - x_min)
+    M = []
+    matched = fill(false, n_samples)
     intervals::Vector{Interval} = []
 
-    while count(matched) / n < rate_coverage_min
-        idx = rand(rng, 1:n)
+    while count(matched) / n_samples < rate_coverage_min
+        idx = rand(rng, 1:n_samples)
         x = X[idx, :]
 
         interval = draw_interval(
@@ -362,16 +367,70 @@ function draw_intervals(
             x_max=x_max,
         )
 
-        push!(intervals, interval)
+        m = elemof(X, interval)
 
-        # Should be faster (due to short-circuiting) than calling `elemof` on
-        # `X`.
-        for i in 1:n
-            matched[i] = matched[i] || elemof(X[i, :], interval)
+        # If the just-created interval is fully covered by the other intervals
+        # (at least as measured by looking at `X`), then do retry.
+        #
+        # Note that the predicate corresponds to `!any(m .&& .!matched)` but we
+        # try not to compute stuff twice.
+        matched_new = m .|| matched
+        if all(matched_new .== matched)
+            continue
+        else
+            push!(intervals, interval)
+            push!(M, m)
+            matched = matched_new
         end
     end
 
-    return intervals
+    if remove_final_fully_overlapped
+        # Note that we have to `hcat` `M` because it is a vector of vectors.
+        return remove_fully_overlapped(
+            intervals,
+            X;
+            matching_matrix=hcat(M...),
+        )
+    else
+        return intervals
+    end
+end
+
+"""
+Remove intervals that only match data points from `X` that the remaining
+intervals match as well.
+"""
+function remove_fully_overlapped(
+    intervals::AbstractVector{Interval},
+    X::AbstractMatrix{Float64};
+    matching_matrix::Union{Missing,AbstractMatrix{Bool}}=missing,
+)
+    if ismissing(matching_matrix)
+        matching_matrix = elemof(X, intervals)
+    end
+
+    # Avoid copying the intervals multiple times by creating and manipulating a
+    # view.
+    view_intervals = view(intervals, :)
+
+    k = 1
+    while k < length(view_intervals)
+        idxs = (1:length(view_intervals) .!= k)
+        # Compute the bit vector of what the other not-yet-marked-for-removal rules
+        # match.
+        m_others = any(view(matching_matrix, :, idxs); dims=2)
+        # Check whether the current rule matches anything that the others do not
+        # match. If not, mark it for removal.
+        if !any(view(matching_matrix, :, k) .&& .!m_others)
+            matching_matrix = view(matching_matrix, :, idxs)
+            view_intervals = view(view_intervals, idxs)
+        else
+            k += 1
+        end
+    end
+
+    # Get the intervals pointed to by the view and return copies of them.
+    return intervals[parentindices(view_intervals)...]
 end
 
 """

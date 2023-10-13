@@ -38,39 +38,48 @@ function Intervals.dimensions(model::Model)
     return Intervals.dimensions(model.conditions[1])
 end
 
-function draw_model(dims::Integer, n_components)
-    return draw_model(Random.default_rng(), dims, n_components)
+function draw_model(
+    dims::Integer,
+    nif::Integer;
+    # Note that these are the same default values as the ones given for
+    # `Intervals.draw_intervals`.
+    spread_min=Intervals.spread_ideal_cubes(dims, nif),
+    spread_max=Inf,
+    x_min=X_MIN,
+    x_max=X_MAX,
+)
+    return draw_model(
+        Random.default_rng(),
+        dims,
+        nif;
+        spread_min=spread_min,
+        spread_max=spread_max,
+        x_min=x_min,
+        x_max=x_max,
+    )
 end
 
 function draw_model(
     rng::AbstractRNG,
     dims::Integer,
-    n_components;
+    nif::Integer;
     # Note that these are the same default values as the ones given for
     # `Intervals.draw_intervals`.
-    spread_min=Intervals.spread_ideal_cubes(dims, n_components),
+    spread_min=Intervals.spread_ideal_cubes(dims, nif),
     spread_max=Inf,
     x_min=X_MIN,
     x_max=X_MAX,
-    volume_min=Intervals.volume_min_factor(
-        dims,
-        n_components;
-        x_min=x_min,
-        x_max=x_max,
-    ),
 )
     conditions = draw_intervals(
         rng,
-        dims,
-        # Leave space for a default rule.
-        n_components - 1;
+        dims;
+        nif=nif,
         spread_min=spread_min,
         spread_max=spread_max,
         x_min=x_min,
         x_max=x_max,
-        volume_min=volume_min,
     )
-    local_models = [draw_constantmodel(rng) for _ in 1:(n_components - 1)]
+    local_models = [draw_constantmodel(rng) for _ in 1:length(conditions)]
 
     # Append the default rule. `push!` is faster than other things I tried.
     push!(conditions, maxgeneral(dims; x_min=x_min, x_max=x_max))
