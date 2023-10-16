@@ -15,6 +15,7 @@ function gentodisk(;
     seed::Int=0,
     rate_coverage_min::Float64=0.8,
     remove_final_fully_overlapped::Bool=false,
+    full::Bool=false,
     prefix_fname::String="data/$d-$nif-$N-$seed-$rate_coverage_min-$remove_final_fully_overlapped",
 )
     params = Dict(:d => d, :N => N, :nif => nif, :seed => seed)
@@ -53,5 +54,11 @@ function gentodisk(;
     # TODO Mlflow here
 
     mkpath(dirname(prefix_fname))
-    return serialize("$prefix_fname.jls", data)
+    serialize("$prefix_fname.stats.jls", data)
+
+    if full
+        save(prefix_fname, task)
+    end
+
+    return nothing
 end

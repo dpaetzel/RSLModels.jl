@@ -17,7 +17,8 @@ include("../src/gentodisk.jl")
 """
 Generate a single learning task and compute learning task statistics for it.
 Then store the statistics together with the parameters required to reconstruct
-the learning tasks to disk.
+the learning tasks to disk; or, if `--full` is given, store the full learning
+task (i.e. train/test data etc.) to disk.
 
 # Options
 
@@ -28,6 +29,9 @@ the learning tasks to disk.
 - `--rate-coverage-min`:
 - `--remove-final-fully-overlapped`:
 - `--spread-min-factor`:
+- `--full`: Whether to generate the full data (if not, only generate statistics;
+            much faster due to much less IO esp. for many input space
+            dimensions).
 - `--prefix-fname`:
 """
 @cast function gen(;
@@ -37,6 +41,7 @@ the learning tasks to disk.
     seed::Int=0,
     rate_coverage_min::Float64=0.8,
     remove_final_fully_overlapped::Bool=false,
+    full::Bool=false,
     prefix_fname::String="data/$d-$nif-$N-$seed-$rate_coverage_min-$remove_final_fully_overlapped",
 )
     # TODO Consider to store model (but not generated data)
@@ -48,6 +53,7 @@ the learning tasks to disk.
         seed=seed,
         rate_coverage_min=rate_coverage_min,
         remove_final_fully_overlapped=remove_final_fully_overlapped,
+        full=full,
         prefix_fname=prefix_fname,
     )
 
@@ -66,6 +72,9 @@ and the sample to disk.
 - `--spread-min-factor`:
 - `--startseed`:
 - `--endseed`:
+- `--full`: Whether to generate the full data (if not, only generate statistics;
+            much faster due to much less IO esp. for many input space
+            dimensions).
 - `--prefix-fname`:
 """
 @cast function genmany(;
@@ -74,27 +83,42 @@ and the sample to disk.
     N::Int=200,
     startseed::Int=0,
     endseed::Int=9,
+    full::Bool=false,
     prefix_fname::String="data/$d-$nif-$N",
 )
+    println(
+        "Warning: `genmany` may not be up to date " *
+        "(look at code before using it!).",
+    )
     for seed in startseed:endseed
-        gen(; d=d, nif=nif, N=N, seed=seed, prefix_fname="$prefix_fname-$seed")
+        gen(;
+            d=d,
+            nif=nif,
+            N=N,
+            seed=seed,
+            full=full,
+            prefix_fname="$prefix_fname-$seed",
+        )
     end
 end
 
 """
-Generate All The Tasks per seed in the given range and sample them, then write
-the task and the sample to disk.
+Generate All The Tasks per seed in the given range.
 
 # Options
 
 - `--spread-min-factor`:
 - `--startseed`:
 - `--endseed`:
+- `--full`: Whether to generate the full data (if not, only generate statistics;
+            much faster due to much less IO esp. for many input space
+            dimensions).
 - `--prefix-fname`:
 """
 @cast function genall(;
     startseed::Int=0,
     endseed::Int=9,
+    full::Bool=false,
     prefix_fname::String="data/genstats/genall",
 )
     # Start 1 additional workers.
@@ -147,6 +171,7 @@ the task and the sample to disk.
                     seed=seed,
                     rate_coverage_min=rate_coverage_min,
                     remove_final_fully_overlapped=remove_final_fully_overlapped,
+                    full=full,
                     prefix_fname="$prefix_fname/$d-$nif-$N-$seed-$rate_coverage_min-$remove_final_fully_overlapped",
                 )
                 # Trigger a process bar update.
