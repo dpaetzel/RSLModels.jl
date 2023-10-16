@@ -14,8 +14,6 @@ using RSLModels.Utils
 
 include("../src/gentodisk.jl")
 
-RidgeRegressor = @load RidgeRegressor pkg = MLJLinearModels
-
 """
 Generate a single learning task and compute learning task statistics for it.
 Then store the statistics together with the parameters required to reconstruct
