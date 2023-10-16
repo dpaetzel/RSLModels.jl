@@ -101,7 +101,7 @@ the task and the sample to disk.
     # addprocs(2; exeflags="--project")
     # Choose the number of workers via the `-p` parameter to Julia (probably `-p
     # auto` for as many workers as there are logical cores).
-    println("Running on $(nprocs()) workers.")
+    println("Running on $(nworkers()) workers.")
     @everywhere include("../src/gentodisk.jl")
 
     remove_final_fully_overlapped = true
