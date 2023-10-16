@@ -1,8 +1,9 @@
 using Base.Filesystem
 using Comonicon
+using Distributed
 using MLJ
 using MLJLinearModels
-using ProgressBars
+using ProgressMeter
 using Serialization
 using Statistics
 
@@ -10,6 +11,8 @@ using RSLModels.Intervals
 using RSLModels.LocalModels
 using RSLModels.Tasks
 using RSLModels.Utils
+
+include("../src/gentodisk.jl")
 
 RidgeRegressor = @load RidgeRegressor pkg = MLJLinearModels
 
@@ -24,6 +27,8 @@ the learning tasks to disk.
 - `--nif, -n`:
 - `--N, -N`:
 - `--seed`:
+- `--rate-coverage-min`:
+- `--remove-final-fully-overlapped`:
 - `--spread-min-factor`:
 - `--prefix-fname`:
 """
@@ -32,48 +37,21 @@ the learning tasks to disk.
     nif::Int=20,
     N::Int=200,
     seed::Int=0,
-    prefix_fname::String="data/$d-$N-$nif-$seed",
-    pbar=missing,
+    rate_coverage_min::Float64=0.8,
+    remove_final_fully_overlapped::Bool=false,
+    prefix_fname::String="data/$d-$nif-$N-$seed-$rate_coverage_min-$remove_final_fully_overlapped",
 )
-    if ismissing(pbar)
-        myprintln = println
-    else
-        myprintln = s -> println(pbar, s)
-    end
-
-    params = Dict(:d => d, :N => N, :nif => nif, :seed => seed)
-    task = generate(d, nif, N; seed=seed)
-    match_X = task.match_X
-
-    y_pred = output_mean(task.model, task.X)
-    y_test_pred = output_mean(task.model, task.X_test)
-
-    mach = machine(RidgeRegressor(), MLJ.table(task.X), task.y)
-    fit!(mach)
-    y_test_pred = MLJ.predict(mach, table(task.X_test))
-    mae_test_linear = mae(y_test_pred, task.y_test)
-
-    stats = Dict(
-        :K => length(task.model.conditions),
-        :coverage => data_coverage(match_X),
-        :overlap_pairs_mean_per_ruleset =>
-            data_overlap_pairs_mean_per_ruleset(match_X),
-        :overlap_pairs_mean_per_rule =>
-            data_overlap_pairs_mean_per_rule(match_X),
-        :mae_train => mean(abs.(task.y .- y_pred)),
-        :mae_test => mean(abs.(task.y_test .- y_test_pred)),
-        :mae_test_linear => mae_test_linear,
-    )
-
-    data = Dict(:params => params, :stats => stats)
-
-    # TODO Mlflow here
-    myprintln("$d $nif $N $seed => $stats")
-
-    mkpath(dirname(prefix_fname))
-    serialize("$prefix_fname.jls", data)
-
     # TODO Consider to store model (but not generated data)
+
+    gentodisk(;
+        d=d,
+        nif=nif,
+        N=N,
+        seed=seed,
+        rate_coverage_min=rate_coverage_min,
+        remove_final_fully_overlapped=remove_final_fully_overlapped,
+        prefix_fname=prefix_fname,
+    )
 
     return nothing
 end
@@ -121,24 +99,79 @@ the task and the sample to disk.
     endseed::Int=9,
     prefix_fname::String="data/genstats/genall",
 )
-    iter = ProgressBar(
-        Iterators.product(
-            startseed:endseed,
-            [1, 2, 3, 5, 10],
-            [2, 4, 7, 10, 15],
+    # Start 1 additional workers.
+    addprocs(2; exeflags="--project")
+    @everywhere include("../src/gentodisk.jl")
+
+    remove_final_fully_overlapped = true
+
+    # ProgressBar(
+    # Note that we have to `collect` here since `@distributed for` seems not to
+    # work with `Iterators.product` objects.
+    iter = collect(
+        enumerate(
+            Iterators.product(
+                startseed:endseed,
+                [1, 2, 3, 5, 10],
+                [2, 4, 7, 10, 15],
+                [0.7, 0.8, 0.9, 0.95],
+            ),
         ),
     )
-    for (seed, d, nif) in iter
-        N = Int(round(200 * 10^(d / 5)))
-        gen(;
-            d=d,
-            nif=nif,
-            N=N,
-            seed=seed,
-            prefix_fname="$prefix_fname/$d-$nif-$N-$seed",
-            pbar=iter,
-        )
+    n_iter = length(iter)
+
+    # Pattern from https://github.com/timholy/ProgressMeter.jl/tree/master#tips-for-parallel-programming .
+    prog = Progress(n_iter)
+    channel = RemoteChannel(() -> Channel{Bool}())
+    # Sync the two tasks at the very end.
+    @sync begin
+        # The first task updates the progress bar.
+        @async while take!(channel)
+            next!(prog)
+        end
+
+        # The second task does the computation.
+        @async begin
+            # Note that we have to add a `@sync` here since otherwise the
+            # `false` is writen to the channel first.
+            @sync @distributed for (i, (seed, d, nif, rate_coverage_min)) in
+                                   iter
+                N = Int(round(200 * 10^(d / 5)))
+                gentodisk(;
+                    d=d,
+                    nif=nif,
+                    N=N,
+                    seed=seed,
+                    rate_coverage_min=rate_coverage_min,
+                    remove_final_fully_overlapped=remove_final_fully_overlapped,
+                    prefix_fname="$prefix_fname/$d-$nif-$N-$seed-$rate_coverage_min-$remove_final_fully_overlapped",
+                )
+                # Trigger a process bar update.
+                put!(channel, true)
+            end
+            # Tell the progress bar task to finish.
+            put!(channel, false)
+        end
     end
+
+    # This is less nice because we have interspersed output from the progress
+    # bar and the other things.
+    #
+    # Note that `@sync` is not required since it is implied by @showprogress.
+    # @sync @distributed for (i, (seed, d, nif, rate_coverage_min)) in iter
+    # @showprogress @distributed for (i, (seed, d, nif, rate_coverage_min)) in
+    #                                iter
+    #     N = Int(round(200 * 10^(d / 5)))
+    #     gentodisk(;
+    #         d=d,
+    #         nif=nif,
+    #         N=N,
+    #         seed=seed,
+    #         rate_coverage_min=rate_coverage_min,
+    #         remove_final_fully_overlapped=remove_final_fully_overlapped,
+    #         prefix_fname="$prefix_fname/$d-$nif-$N-$seed-$rate_coverage_min-$remove_final_fully_overlapped",
+    #     )
+    # end
 end
 
 @main
