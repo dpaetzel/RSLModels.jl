@@ -36,6 +36,8 @@ function generate(
     # `Intervals.draw_intervals`.
     spread_min=Intervals.spread_ideal_cubes(dims, nif),
     spread_max=Inf,
+    rate_coverage_min::Float64=0.8,
+    remove_final_fully_overlapped::Bool=true,
     x_min=X_MIN,
     x_max=X_MAX,
 )
@@ -50,6 +52,8 @@ function generate(
         nif;
         spread_min=spread_min,
         spread_max=spread_max,
+        rate_coverage_min=rate_coverage_min,
+        remove_final_fully_overlapped=remove_final_fully_overlapped,
         x_min=x_min,
         x_max=x_max,
     )
