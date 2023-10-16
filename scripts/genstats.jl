@@ -98,7 +98,10 @@ the task and the sample to disk.
     prefix_fname::String="data/genstats/genall",
 )
     # Start 1 additional workers.
-    addprocs(2; exeflags="--project")
+    # addprocs(2; exeflags="--project")
+    # Choose the number of workers via the `-p` parameter to Julia (probably `-p
+    # auto` for as many workers as there are logical cores).
+    println("Running on $(nprocs()) workers.")
     @everywhere include("../src/gentodisk.jl")
 
     remove_final_fully_overlapped = true
@@ -118,7 +121,9 @@ the task and the sample to disk.
     )
     n_iter = length(iter)
 
-    # Pattern from https://github.com/timholy/ProgressMeter.jl/tree/master#tips-for-parallel-programming .
+    # Pattern from
+    # https://github.com/timholy/ProgressMeter.jl/tree/master#tips-for-parallel-programming
+    # (but fixed).
     prog = Progress(n_iter)
     channel = RemoteChannel(() -> Channel{Bool}())
     # Sync the two tasks at the very end.
