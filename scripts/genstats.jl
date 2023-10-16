@@ -156,25 +156,6 @@ the task and the sample to disk.
             put!(channel, false)
         end
     end
-
-    # This is less nice because we have interspersed output from the progress
-    # bar and the other things.
-    #
-    # Note that `@sync` is not required since it is implied by @showprogress.
-    # @sync @distributed for (i, (seed, d, nif, rate_coverage_min)) in iter
-    # @showprogress @distributed for (i, (seed, d, nif, rate_coverage_min)) in
-    #                                iter
-    #     N = Int(round(200 * 10^(d / 5)))
-    #     gentodisk(;
-    #         d=d,
-    #         nif=nif,
-    #         N=N,
-    #         seed=seed,
-    #         rate_coverage_min=rate_coverage_min,
-    #         remove_final_fully_overlapped=remove_final_fully_overlapped,
-    #         prefix_fname="$prefix_fname/$d-$nif-$N-$seed-$rate_coverage_min-$remove_final_fully_overlapped",
-    #     )
-    # end
 end
 
 @main
