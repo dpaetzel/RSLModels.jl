@@ -1,5 +1,6 @@
 module LocalModels
 
+using AutoHashEquals
 using Distributions
 using LinearAlgebra
 using Random
@@ -8,7 +9,7 @@ using StatsBase
 export ConstantModel,
     draw_constantmodel, mixing, mix, output, output_mean, output_variance
 
-struct ConstantModel
+@auto_hash_equals struct ConstantModel
     coef::Real
     dist_noise::Distribution
     coef_mix::Real

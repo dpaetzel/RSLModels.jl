@@ -105,6 +105,12 @@ git-tree-sha1 = "c06a868224ecba914baa6942988e2f2aade419be"
 uuid = "a9b6321e-bd34-4604-b9c9-b65b8de01458"
 version = "0.1.0"
 
+[[deps.AutoHashEquals]]
+deps = ["Pkg"]
+git-tree-sha1 = "16d2cc66d4de2b4cac1b0942671e07edbfb922c5"
+uuid = "15f4f7f2-30c1-5605-9d31-71845cf9641f"
+version = "2.0.0"
+
 [[deps.Automa]]
 deps = ["TranscodingStreams"]
 git-tree-sha1 = "ef9997b3d5547c48b41c7bd8899e812a917b409d"

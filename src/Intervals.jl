@@ -1,5 +1,6 @@
 module Intervals
 
+using AutoHashEquals
 using Distributions
 using LinearAlgebra
 using Random
@@ -27,7 +28,7 @@ const X_MAX::Float64 = 1.0
 # TODO Consider to move this global constant somewhere
 const dist_spread = Beta(1.55, 2.74)
 
-struct Interval
+@auto_hash_equals struct Interval
     lbound::AbstractVector{Float64}
     ubound::AbstractVector{Float64}
     lopen::AbstractVector{Bool}

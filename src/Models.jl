@@ -1,7 +1,8 @@
 module Models
 
-using Random
+using AutoHashEquals
 using Distributions
+using Random
 
 using ..Intervals
 using ..LocalModels
@@ -11,7 +12,7 @@ export Model, dimensions, draw_data, draw_model, match
 const X_MIN::Float64 = Intervals.X_MIN
 const X_MAX::Float64 = Intervals.X_MAX
 
-struct Model
+@auto_hash_equals struct Model
     conditions::AbstractVector
     local_models::AbstractVector
     x_min::Float64

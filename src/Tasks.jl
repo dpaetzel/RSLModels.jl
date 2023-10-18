@@ -1,5 +1,6 @@
 module Tasks
 
+using AutoHashEquals
 using NPZ
 using Random
 using Serialization
@@ -12,7 +13,7 @@ export Task, dimensions, generate, save, load
 const X_MIN::Float64 = Models.X_MIN
 const X_MAX::Float64 = Models.X_MAX
 
-struct Task
+@auto_hash_equals struct Task
     seed::Integer
     model::Model
     X::AbstractMatrix
