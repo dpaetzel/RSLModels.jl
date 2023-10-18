@@ -114,8 +114,8 @@ function save(fname_prefix::String, task::Task)
             "y" => task.y,
             "X_test" => task.X_test,
             "y_test" => task.y_test,
-            "git_dirty" => [task.git_dirty],
-            "hash" => [task.hash],
+            "git_dirty" => task.git_dirty,
+            "hash" => task.hash,
         ),
     )
 
