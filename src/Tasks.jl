@@ -14,6 +14,11 @@ export Task, dimensions, generate, save, load
 const X_MIN::Float64 = Models.X_MIN
 const X_MAX::Float64 = Models.X_MAX
 
+"""
+- `git_commit`: Git commit hash of the current directory when `generate` was called.
+- `hash_inputs`: Hash of all the inputs to `generate`.
+- `hash`: Hash of `hash_inputs` and `git_commit`.
+"""
 @auto_hash_equals struct Task
     seed::Integer
     model::Model
@@ -24,6 +29,8 @@ const X_MAX::Float64 = Models.X_MAX
     match_X::AbstractMatrix
     git_commit::AbstractString
     git_dirty::Bool
+    hash_inputs::UInt
+    hash::UInt
 end
 
 function Intervals.dimensions(task::Task)
@@ -65,6 +72,22 @@ function generate(
     X_test, y_test = draw_data(rng, model, n_test)
     match_X = Models.match(model, X)
 
+    git_commit = LibGit2.head(".")
+    git_dirty = LibGit2.isdirty(GitRepo("."))
+    hash_inputs = hash((
+        dims,
+        nif,
+        n_train,
+        n_test,
+        seed,
+        spread_min,
+        spread_max,
+        rate_coverage_min,
+        remove_final_fully_overlapped,
+        x_min,
+        x_max,
+    ))
+
     return Task(
         seed,
         model,
@@ -73,8 +96,10 @@ function generate(
         X_test,
         y_test,
         match_X,
-        LibGit2.head("."),
-        LibGit2.isdirty(GitRepo(".")),
+        git_commit,
+        git_dirty,
+        hash_inputs,
+        hash((hash_inputs, git_commit)),
     )
 end
 
@@ -89,6 +114,8 @@ function save(fname_prefix::String, task::Task)
             "y" => task.y,
             "X_test" => task.X_test,
             "y_test" => task.y_test,
+            "git_dirty" => [task.git_dirty],
+            "hash" => [task.hash],
         ),
     )
 

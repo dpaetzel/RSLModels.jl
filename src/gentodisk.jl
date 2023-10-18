@@ -49,7 +49,7 @@ function gentodisk(;
         :mae_test_linear => mae_test_linear,
     )
 
-    data = Dict(:params => params, :stats => stats)
+    data = Dict(:hash => task.hash, :params => params, :stats => stats)
 
     # TODO Mlflow here
 
