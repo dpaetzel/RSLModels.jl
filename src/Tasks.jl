@@ -1,6 +1,7 @@
 module Tasks
 
 using AutoHashEquals
+using LibGit2
 using NPZ
 using Random
 using Serialization
@@ -21,6 +22,8 @@ const X_MAX::Float64 = Models.X_MAX
     X_test::AbstractMatrix
     y_test::AbstractVector
     match_X::AbstractMatrix
+    git_commit::AbstractString
+    git_dirty::Bool
 end
 
 function Intervals.dimensions(task::Task)
@@ -62,7 +65,17 @@ function generate(
     X_test, y_test = draw_data(rng, model, n_test)
     match_X = Models.match(model, X)
 
-    return Task(seed, model, X, y, X_test, y_test, match_X)
+    return Task(
+        seed,
+        model,
+        X,
+        y,
+        X_test,
+        y_test,
+        match_X,
+        LibGit2.head("."),
+        LibGit2.isdirty(GitRepo(".")),
+    )
 end
 
 # For now, we write the training and test data to an NPZ file as well (in
