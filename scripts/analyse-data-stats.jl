@@ -2,6 +2,7 @@ using Base.Filesystem
 using CairoMakie
 using Comonicon
 using DataFrames
+using Dates
 using KittyTerminalImages
 using LaTeXStrings
 using MLJ
@@ -33,6 +34,8 @@ function readstats(;
             data,
         ),
     )
+
+    df[!, "fname"] .= fnames
 
     df[!, "params.d"] .= Int.(df[:, "params.d"])
     df[!, "params.N"] .= Int.(df[:, "params.N"])
@@ -258,7 +261,58 @@ function nontrivial(df)
     return df[df[:, "stats.K"] .!== 2, :]
 end
 
-folder = "data-stats/2023-10-18-386605-data-complete"
+function plotall(df)
+    folder_plots = "$(folder)-plots"
+
+    mkpath(folder_plots)
+
+    densities_K(df)
+    CairoMakie.save(
+        "$folder_plots/grid-DX-nif-density-K.pdf",
+        current_figure(),
+    )
+
+    densities_overlap(df)
+    CairoMakie.save(
+        "$folder_plots/grid-DX-nif-density-overlap.pdf",
+        current_figure(),
+    )
+
+    overlap_vs_coverage(df)
+    CairoMakie.save(
+        "$folder_plots/grid-DX-nif-scatter-overlap-coverage.pdf",
+        current_figure(),
+    )
+
+    K_vs_coverage(df)
+    CairoMakie.save(
+        "$folder_plots/grid-DX-nif-scatter-K-coverage.pdf",
+        current_figure(),
+    )
+
+    K_vs_overlap(df)
+    CairoMakie.save(
+        "$folder_plots/grid-DX-nif-scatter-K-overlap.pdf",
+        current_figure(),
+    )
+
+    nif_vs_K(df)
+    CairoMakie.save("$folder_plots/box-nif-K.pdf", current_figure())
+
+    overlap(df)
+    CairoMakie.save(
+        "$folder_plots/line-DX-density-overlap.pdf",
+        current_figure(),
+    )
+
+    K(df)
+    return CairoMakie.save(
+        "$folder_plots/line-DX-density-K.pdf",
+        current_figure(),
+    )
+end
+
+folder = "2023-10-18-386605-data-complete"
 df = readstats(; prefix_fname=folder)
 
 if all(
@@ -268,44 +322,91 @@ if all(
     println("All sets with K=2 have an overlap of 0, as expected.")
 end
 
-df = nontrivial(df)
+# Check whether all is dandy.
+display(combine(groupby(df, ["params.d", "params.nif"]), df_ -> size(df_, 1)))
 
-folder_plots = "$(folder)-plots"
+function draw_foreach_k(df; n_per_k=4, ks=[3, 5, 7, 10, 15, 20, 30])
+    tasks = Dict(k => DataFrame() for k in ks)
 
-mkpath(folder_plots)
+    # Go once over the DataFrame, shuffling its rows beforehand.
+    for row in eachrow(df[shuffle(1:size(df, 1)), :])
+        local K = row["stats.K"]
 
-densities_K(df)
-CairoMakie.save("$folder_plots/grid-DX-nif-density-K.pdf", current_figure())
+        # Get the vector of tasks that we already selected for the `K` of the
+        # current row and if we have not already collected enough tasks for it, add
+        # the task to it.
+        if in(K, ks) && size(tasks[K], 1) < n_per_k
+            push!(tasks[K], row)
+        end
+    end
 
-densities_overlap(df)
-CairoMakie.save(
-    "$folder_plots/grid-DX-nif-density-overlap.pdf",
-    current_figure(),
+    return tasks
+end
+
+bins = [0.7, 0.8, 0.9, 0.95]
+
+# Filter for `coverage >= 0.7` (may not be fulfilled by a margin due to coverage
+# computation being sample based but we have enough data to just discard these
+# cases).
+gt = df[!, "stats.coverage"] .>= bins[1]
+println(
+    "Discarding $(size(df, 1) - count(gt)) rows where coverage is " *
+    "smaller than lowest bin …",
+)
+df = df[gt, :]
+
+df[!, "stats.coverage_bin"] = map(
+    coverage -> bins[searchsortedlast(bins, coverage)],
+    df[:, "stats.coverage"],
 )
 
-overlap_vs_coverage(df)
-CairoMakie.save(
-    "$folder_plots/grid-DX-nif-scatter-overlap-coverage.pdf",
-    current_figure(),
+# Select learning tasks for each combination of `DX` and `coverage_bin`.
+df_sel =
+    combine(groupby(df, ["params.d", "stats.coverage_bin"]), draw_foreach_k)
+df_sel = flatten(df_sel, "x1")
+# Extract `K` to its own column.
+df_sel[!, "K"] = map(first, df_sel.x1)
+# Extract the file names from the inner `DataFrame`s. The ternary is required
+# to catch cases where the DataFrame is empty (since then indexing for "fname"
+# fails).
+df_sel[!, "fnames"] =
+    map(pair -> size(pair[2], 1) > 0 ? pair[2][!, "fname"] : [], df_sel.x1)
+# Flatten wrt to the file names (which are vectors up until now).
+df_sel = flatten(df_sel, "fnames")
+
+# Compute how many learning tasks we were able to select per combination of `DX`,
+# `coverage` and `K`.
+df_sizes = combine(
+    groupby(df_sel, ["params.d", "stats.coverage_bin", "K"]),
+    df -> size(df, 1),
 )
+# Print any combinations for which we have not yet created enough learning
+# tasks.
+display(df_sizes[df_sizes.x1 .!= 4, :])
 
-K_vs_coverage(df)
-CairoMakie.save(
-    "$folder_plots/grid-DX-nif-scatter-K-coverage.pdf",
-    current_figure(),
-)
+function write_fishscript(df_sel)
+    length_df_sel = size(df_sel, 1)
 
-K_vs_overlap(df)
-CairoMakie.save(
-    "$folder_plots/grid-DX-nif-scatter-K-overlap.pdf",
-    current_figure(),
-)
+    fnames_selected = df_sel.fnames
+    # We replace colons with dashes so scp'ing is easier.
+    thetime = replace(string(now()), ":" => "-")
+    folder_sel = "$thetime-task-selection"
+    open("$thetime-copy_selection.fish", "w") do f
+        write(f, "#!/usr/bin/env fish\n\n")
+        write(f, "# CAREFUL! THIS FILE WAS AUTOGENERATED!\n\n")
+        write(f, "mkdir $folder_sel\n")
+        for fname in fnames_selected
+            fname_glob = replace(fname, "stats.jls" => "*")
+            write(f, "cp -vu $(fname_glob) $folder_sel\n")
+        end
+        return write(
+            f,
+            "echo\n",
+            "echo There should be $length_df_sel tasks and there are (math (ls $folder_sel | wc -l) / 3).\n",
+        )
+    end
 
-nif_vs_K(df)
-CairoMakie.save("$folder_plots/box-nif-K.pdf", current_figure())
+    return nothing
+end
 
-overlap(df)
-CairoMakie.save("$folder_plots/line-DX-density-overlap.pdf", current_figure())
-
-K(df)
-CairoMakie.save("$folder_plots/line-DX-density-K.pdf", current_figure())
+write_fishscript(df_sel)
