@@ -136,9 +136,14 @@ Generate All The Tasks per seed in the given range.
     iter = collect(
         enumerate(
             Iterators.product(
+                # seed
                 startseed:endseed,
-                [1, 2, 3, 5, 10],
-                [2, 4, 7, 10, 15],
+                # d
+                [1, 2, 3, 5, 10, 12],
+                # nif
+                # We aim for these Ks: [3, 5, 7, 10, 15, 20, 30].
+                [2, 4, 7, 10, 20, 40],
+                # rate_coverage_min
                 [0.7, 0.8, 0.9, 0.95],
             ),
         ),
