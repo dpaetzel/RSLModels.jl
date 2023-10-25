@@ -12,5 +12,6 @@ include("Models.jl")
 include("Scores.jl")
 include("Tasks.jl")
 include("Utils.jl")
+include("MLFlowUtils.jl")
 
 end
