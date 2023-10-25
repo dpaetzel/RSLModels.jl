@@ -7,7 +7,8 @@ using NPZ
 
 using RSLModels.Intervals
 
-export add_missing_keys!, has_bounds, load_runs, run_to_dict, tryread
+export add_missing_keys!,
+    algorithm_inv, check, has_bounds, load_runs, run_to_dict, runtimes, tryread
 
 # https://stackoverflow.com/a/68853482
 function struct_to_dict(s, S)
@@ -133,6 +134,67 @@ function load_runs(exp_name; url="http://localhost:5000")
     df[!, "duration_min"] =
         Missings.replace(df.end_time, now()) .- df.start_time
     return df
+end
+
+function algorithms_inv(df)
+    return Dict(
+        unique(df[:, "params.algorithm.id"] .=> df[:, "params.algorithm"]),
+    )
+end
+
+function runtimes(df; unit=Minute, yscale=identity)
+    n_algorithms = length(algorithms_inv(df))
+
+    fig = Figure()
+    ax = Axis(fig[1, 1]; yscale=yscale)
+    scatter!(
+        ax,
+        df[:, "params.algorithm.id"],
+        passmissing(Dates.value).(passmissing(ceil).(df.duration, [unit]));
+        marker='+',
+    )
+    df_missing = df[ismissing.(df.duration), :]
+    if size(df_missing, 1) > 0
+        scatter!(
+            ax,
+            df_missing[:, "params.algorithm.id"],
+            Dates.value.(ceil.(df_missing.duration_min, [unit]));
+            marker='?',
+        )
+    end
+    ax.xticks =
+        (1:n_algorithms, [algorithms_inv(df)[id] for id in 1:n_algorithms])
+    ax.xticklabelrotation = 0.5
+    ax.ylabel = "Runtime [$(string(unit))]"
+    return current_figure()
+end
+
+function check(df)
+    df_n_runs = combine(groupby(df, "params.algorithm"), dfg -> size(dfg, 1))
+    if all(df_n_runs[:, :x1] .== df_n_runs[1, :x1])
+        println(
+            "✅ All algorithms have been run the same number of times " *
+            "(i.e. $(df_n_runs[1, :x1]) times).",
+        )
+    else
+        println("❌ Algorithms have been run different number of times.")
+        display(df_n_runs)
+    end
+
+    df_n_runs = combine(groupby(df, "params.data.hash"), dfg -> size(dfg, 1))
+    if all(df_n_runs[:, :x1] .== df_n_runs[1, :x1])
+        println(
+            "✅ All algorithms have been run on each data set the same number " *
+            "of times (i.e. $(df_n_runs[1, :x1]) times).",
+        )
+    else
+        println(
+            "❌ Algorithms have been run different number of times " *
+            "per data set.",
+        )
+    end
+
+    return nothing
 end
 
 end
