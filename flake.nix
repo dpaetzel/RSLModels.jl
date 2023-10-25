@@ -23,7 +23,8 @@
               # https://devenv.sh/reference/options/
               languages.python.enable = true;
               languages.python.package =
-                pkgs.python310.withPackages (ps: [ ps.matplotlib ps.mlflow ]);
+                # setuptools is required by mlflow, it seems.
+                pkgs.python310.withPackages (ps: [ ps.matplotlib ps.mlflow ps.setuptools ]);
 
               languages.julia.enable = true;
             }];
