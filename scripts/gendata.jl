@@ -107,7 +107,6 @@ Generate All The Tasks per seed in the given range.
 
 # Options
 
-- `--spread-min-factor`:
 - `--startseed`:
 - `--endseed`:
 - `--full`: Whether to generate the full data (if not, only generate statistics;
