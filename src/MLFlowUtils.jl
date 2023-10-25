@@ -59,7 +59,36 @@ function add_missing_keys!(dicts)
     return dicts
 end
 
-# NOTE Always gotta `serve-results` for now, then do this.
+"""
+If given an experiment name and a directory, start an `mlflow ui` process on
+port 33333 using that directory as the backend store uri and and load all runs
+of that experiment from there. Then, end the process.
+
+If given an experiment name and a URL, access the mlflow REST API at that URL
+(i.e. make sure `mlflow ui` is running at the corresponding port—or simply use
+the first form of this command so you don't need to care about running the
+`mlflow ui` server by hand) and load all runs of that experiment from there.
+"""
+function load_runs end
+
+function load_runs(exp_name, dir::String)
+    port = 33333
+    println("Starting mlflow ui server …")
+    proc = run(
+        `mlflow ui --backend-store-uri "$dir" --default-artifact-root "$dir" --gunicorn-opts "--timeout 0" --port $port`;
+        wait=false,
+    )
+    println("Started mlflow ui server.")
+
+    df = load_runs(exp_name; url="http://localhost:$port")
+
+    println("Shutting down mlflow ui server …")
+    kill(proc)
+    println("Shut down mlflow ui server.")
+
+    return df
+end
+
 function load_runs(exp_name; url="http://localhost:5000")
     println("Loading experiments from $url …")
     mlf = MLFlow(url)
@@ -68,6 +97,7 @@ function load_runs(exp_name; url="http://localhost:5000")
     expid = exp[1].experiment_id
     println("Loading runs for experiment $expid from $url …")
     runs = searchruns(mlf, expid; max_results=10000)
+    println("Finished loading runs for experiment $expid from $url.")
 
     dicts = run_to_dict.(runs)
     add_missing_keys!(dicts)
