@@ -16,7 +16,7 @@
     in {
       devShells = forEachSystem (system:
         let pkgs = nixpkgs.legacyPackages.${system};
-        in {
+        in rec {
           default = devenv.lib.mkShell {
             inherit inputs pkgs;
             modules = [{
@@ -29,6 +29,7 @@
               languages.julia.enable = true;
             }];
           };
+          devShell.${system} = default;
         });
     };
 }
