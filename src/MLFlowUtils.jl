@@ -8,7 +8,42 @@ using NPZ
 using RSLModels.Intervals
 
 export add_missing_keys!,
-    algorithm_inv, check, has_bounds, load_runs, run_to_dict, runtimes, tryread
+    algorithms_inv,
+    check,
+    has_bounds,
+    load_runs,
+    run_to_dict,
+    runtimes,
+    tryread
+
+function killsubprocs(proc)
+    # First, record PID of the process and its child processes.
+    pid = getpid(proc)
+    # https://superuser.com/questions/363169/#comment999457_363179
+    pids = read(
+        pipeline(
+            `pstree -pn $pid`,
+            `grep -o "([[:digit:]]*)"`,
+            `grep -o "[[:digit:]]*"`,
+        ),
+        String,
+    )
+    pids = parse.(Int, split(chomp(pids), "\n"))
+
+    # Try to end the process and its child processes nicely.
+    kill(proc)
+
+    # Send kill to all child process just in case.
+    for pid in pids
+        try
+            run(`kill $pid`)
+        catch e
+            println(
+                "Child process with PID $pid ended before we could kill it. 👍",
+            )
+        end
+    end
+end
 
 # https://stackoverflow.com/a/68853482
 function struct_to_dict(s, S)
@@ -62,8 +97,9 @@ end
 
 """
 If given an experiment name and a directory, start an `mlflow ui` process on
-port 33333 using that directory as the backend store uri and and load all runs
-of that experiment from there. Then, end the process.
+port 33333 using that directory as the backend store URI (i.e. specify the
+`mlruns` folder!) and and load all runs of that experiment from there. Then, end
+the process.
 
 If given an experiment name and a URL, access the mlflow REST API at that URL
 (i.e. make sure `mlflow ui` is running at the corresponding port—or simply use
@@ -75,16 +111,46 @@ function load_runs end
 function load_runs(exp_name, dir::String)
     port = 33333
     println("Starting mlflow ui server …")
+    out = Pipe()
+    err = Pipe()
     proc = run(
-        `mlflow ui --backend-store-uri "$dir" --default-artifact-root "$dir" --gunicorn-opts "--timeout 0" --port $port`;
+        pipeline(
+            `mlflow ui --backend-store-uri "$dir" --default-artifact-root "$dir" --gunicorn-opts "--timeout 0" --port $port`;
+            stdout=out,
+            stderr=err,
+        );
         wait=false,
     )
     println("Started mlflow ui server.")
 
+    i_max = 15
+    i = 1
+    line = readline(err)
+    while process_running(proc) &&
+              !occursin("Booting worker with pid", line) &&
+              i < i_max
+        println(line)
+        println("Waiting for mlflow REST interface to be responsive …")
+        sleep(1.0)
+        i += 1
+        line = readline(err)
+    end
+
+    if !process_running(proc)
+        error("Something went wrong, mlflow ui stopped by itself")
+    elseif i >= i_max
+        killsubprocs(proc)
+        error("mlflow ui did not start or did not start fast enough")
+    else
+        println("mlflow ui up and running!")
+    end
+
     df = load_runs(exp_name; url="http://localhost:$port")
+    println("Fixing artifact URIs.")
+    df[:, "artifact_uri"] = replace.(df.artifact_uri, r"^.*/mlruns" => "$dir")
 
     println("Shutting down mlflow ui server …")
-    kill(proc)
+    killsubprocs(proc)
     println("Shut down mlflow ui server.")
 
     return df
@@ -184,14 +250,11 @@ function check(df)
     df_n_runs = combine(groupby(df, "params.data.hash"), dfg -> size(dfg, 1))
     if all(df_n_runs[:, :x1] .== df_n_runs[1, :x1])
         println(
-            "✅ All algorithms have been run on each data set the same number " *
+            "✅ Each dataset was used the same number " *
             "of times (i.e. $(df_n_runs[1, :x1]) times).",
         )
     else
-        println(
-            "❌ Algorithms have been run different number of times " *
-            "per data set.",
-        )
+        println("❌ Datasets have been used different numbers of times.")
     end
 
     return nothing
