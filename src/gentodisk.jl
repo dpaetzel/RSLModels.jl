@@ -27,15 +27,20 @@ function gentodisk(;
         rate_coverage_min=rate_coverage_min,
         remove_final_fully_overlapped=remove_final_fully_overlapped,
     )
-    match_X = task.match_X
 
-    y_pred = output_mean(task.model, task.X)
-    y_test_pred = output_mean(task.model, task.X_test)
+    X, y, X_test, y_test, match_X = generate_data(task)
 
-    mach = machine(RidgeRegressor(), MLJ.table(task.X), task.y)
+    # TODO mmap these `y`s as well
+    y_pred = output_mean(task.model, X)
+    mae_train = mean(abs.(y .- y_pred))
+
+    y_test_pred = output_mean(task.model, X_test)
+    mae_test = mae(y_test_pred, y_test)
+
+    mach = machine(RidgeRegressor(), MLJ.table(X), y)
     fit!(mach; verbosity=0)
-    y_test_pred = MLJ.predict(mach, table(task.X_test))
-    mae_test_linear = mae(y_test_pred, task.y_test)
+    y_test_pred = MLJ.predict(mach, table(X_test))
+    mae_test_linear = mae(y_test_pred, y_test)
 
     stats = Dict(
         :K => length(task.model.conditions),
@@ -44,8 +49,8 @@ function gentodisk(;
             data_overlap_pairs_mean_per_ruleset(match_X),
         :overlap_pairs_mean_per_rule =>
             data_overlap_pairs_mean_per_rule(match_X),
-        :mae_train => mean(abs.(task.y .- y_pred)),
-        :mae_test => mean(abs.(task.y_test .- y_test_pred)),
+        :mae_train => mae_train,
+        :mae_test => mae_test,
         :mae_test_linear => mae_test_linear,
     )
 
@@ -57,8 +62,11 @@ function gentodisk(;
     serialize("$prefix_fname.stats.jls", data)
 
     if full
-        save(prefix_fname, task)
+        write_npz(prefix_fname, task, X, y, X_test, y_test, match_X)
+        serialize("$prefix_fname.task.jls", task)
     end
+
+    # TODO Consider to use Bumper.jl to ensure that nothing stays open
 
     return nothing
 end
