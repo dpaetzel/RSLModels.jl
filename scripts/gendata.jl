@@ -112,12 +112,15 @@ Generate All The Tasks per seed in the given range.
 - `--full`: Whether to generate the full data (if not, only generate statistics;
             much faster due to much less IO esp. for many input space
             dimensions).
+- `--usemmap`: Whether to memory-map large arrays (X, y, matching matrices, …)
+            to disk and save RAM that way.
 - `--prefix-fname`:
 """
 @cast function genall(;
     startseed::Int=0,
     endseed::Int=9,
     full::Bool=false,
+    usemmap::Bool=false,
     prefix_fname::String="data/genstats/genall",
 )
     # Start 1 additional workers.
@@ -176,6 +179,7 @@ Generate All The Tasks per seed in the given range.
                     rate_coverage_min=rate_coverage_min,
                     remove_final_fully_overlapped=remove_final_fully_overlapped,
                     full=full,
+                    usemmap=usemmap,
                     prefix_fname="$prefix_fname/$d-$nif-$N-$seed-$rate_coverage_min-$remove_final_fully_overlapped",
                 )
                 # Trigger a process bar update.

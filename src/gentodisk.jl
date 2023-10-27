@@ -1,6 +1,7 @@
 using Base.Filesystem
 using MLJ
 using MLJLinearModels
+using Mmap
 using Serialization
 using Statistics
 
@@ -16,6 +17,7 @@ function gentodisk(;
     rate_coverage_min::Float64=0.8,
     remove_final_fully_overlapped::Bool=false,
     full::Bool=false,
+    usemmap::Bool=false,
     prefix_fname::String="data/$d-$nif-$N-$seed-$rate_coverage_min-$remove_final_fully_overlapped",
 )
     params = Dict(:d => d, :N => N, :nif => nif, :seed => seed)
@@ -28,18 +30,23 @@ function gentodisk(;
         remove_final_fully_overlapped=remove_final_fully_overlapped,
     )
 
-    X, y, X_test, y_test, match_X = generate_data(task)
+    X, y, X_test, y_test, match_X = generate_data(task; usemmap=usemmap)
 
-    # TODO mmap these `y`s as well
-    y_pred = output_mean(task.model, X)
+    (path_y_pred, io_y_pred) = mktemp(tempdir())
+    y_pred = mmap(io_y_pred, Vector{Float64}, task.n_train)
+
+    (path_y_test_pred, io_y_test_pred) = mktemp(tempdir())
+    y_test_pred = mmap(io_y_test_pred, Vector{Float64}, task.n_test)
+
+    y_pred[:] = output_mean(task.model, X)
     mae_train = mean(abs.(y .- y_pred))
 
-    y_test_pred = output_mean(task.model, X_test)
+    y_test_pred[:] = output_mean(task.model, X_test)
     mae_test = mae(y_test_pred, y_test)
 
     mach = machine(RidgeRegressor(), MLJ.table(X), y)
     fit!(mach; verbosity=0)
-    y_test_pred = MLJ.predict(mach, table(X_test))
+    y_test_pred[:] = MLJ.predict(mach, table(X_test))
     mae_test_linear = mae(y_test_pred, y_test)
 
     stats = Dict(

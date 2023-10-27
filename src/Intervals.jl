@@ -3,6 +3,7 @@ module Intervals
 using AutoHashEquals
 using Distributions
 using LinearAlgebra
+using Mmap
 using Random
 using StatsBase
 
@@ -81,23 +82,39 @@ function elemof(x::AbstractVector{Float64}, interval::Interval)
     return true
 end
 
-function elemof(X::AbstractMatrix{Float64}, interval::Interval)
-    result = Array{Bool}(undef, size(X)[1])
-    for n in 1:size(X)[1]
-        result[n] = elemof(view(X, n, :), interval)
+function elemof(X::AbstractMatrix{Float64}, interval::Interval; usemmap=false)
+    N = size(X, 1)
+    if usemmap
+        (path_out, io_out) = mktemp(tempdir())
+        out = mmap(io_out, Vector{Bool}, N)
+    else
+        out = Array{Bool}(undef, N)
     end
-    return result
+    for n in 1:N
+        out[n] = elemof(view(X, n, :), interval)
+    end
+    return out
 end
 
 function elemof(
     X::AbstractMatrix{Float64},
-    intervals::AbstractVector{Interval},
+    intervals::AbstractVector{Interval};
+    usemmap=false,
 )
-    matching_matrix = Matrix{Bool}(undef, size(X)[1], length(intervals))
-    for i in 1:length(intervals)
-        matching_matrix[:, i] = elemof(X, intervals[i])
+    N = size(X, 1)
+    K = length(intervals)
+
+    (path_out, io_out) = mktemp(tempdir())
+    out = mmap(io_out, Matrix{Bool}, (N, K))
+
+    # Outer loop should go over columns and inner loop over rows. See
+    # https://docs.julialang.org/en/v1/manual/performance-tips/#man-performance-column-major
+    for k in 1:K
+        for n in 1:N
+            out[n, k] = elemof(view(X, n, :), intervals[k])
+        end
     end
-    return matching_matrix
+    return out
 end
 
 function volume(nothing)

@@ -101,32 +101,18 @@ Generate data for the given task.
 Since data may not fit into RAM, memory-map each array created to a temporary
 file under `dir_parent`.
 """
-function generate_data(task::Task; dir_parent=tempdir())
+function generate_data(task::Task; usemmap=false, dir_parent=tempdir())
     n_train = task.n_train
     n_test = task.n_test
     dx = dimensions(task.model)
     K = length(task.model.local_models)
 
-    (path_X, io_X) = mktemp(dir_parent)
-    X = mmap(io_X, Array{Float64,2}, (n_train, dx))
-    (path_y, io_y) = mktemp(dir_parent)
-    y = mmap(io_X, Array{Float64,2}, (n_train, 1))
-
-    (path_X_test, io_X_test) = mktemp(dir_parent)
-    X_test = mmap(io_X_test, Array{Float64,2}, (n_test, dx))
-    (path_y_test, io_y_test) = mktemp(dir_parent)
-    y_test = mmap(io_X, Array{Float64,2}, (n_test, 1))
-
-    (path_match_X, io_match_X) = mktemp(dir_parent)
-    match_X = mmap(io_X, Array{Float64,2}, (n_train, K))
-
     # Always add the same magic number to the task's random seed.
     magic = 1337
     rng = Random.Xoshiro(task.seed + magic)
 
-    X, y = draw_data(rng, task.model, task.n_train)
-    X_test, y_test = draw_data(rng, task.model, task.n_test)
-    match_X = Models.match(task.model, X)
+    X, y, match_X = draw_data(rng, task.model, task.n_train; usemmap=usemmap)
+    X_test, y_test, _ = draw_data(rng, task.model, task.n_test)
 
     return (X, y, X_test, y_test, match_X)
 end

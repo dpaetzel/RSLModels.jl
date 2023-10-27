@@ -3,6 +3,7 @@ module LocalModels
 using AutoHashEquals
 using Distributions
 using LinearAlgebra
+using Mmap
 using Random
 using StatsBase
 
@@ -80,34 +81,88 @@ end
 # inputs themselves but only on the number of them. We nevertheless provide `X`
 # fully here for abstraction reasons (e.g. if we add another kind of local model
 # that actually does depend on the inputs).
-function output(model::ConstantModel, X::AbstractMatrix{Float64})
-    return output(Random.default_rng(), model, X)
+function output(
+    model::ConstantModel,
+    X::AbstractMatrix{Float64};
+    usemmap=false,
+)
+    return output(Random.default_rng(), model, X; usemmap=usemmap)
 end
 
 function output(
     rng::AbstractRNG,
     model::ConstantModel,
-    X::AbstractMatrix{Float64},
+    X::AbstractMatrix{Float64};
+    usemmap=false,
 )
-    return [output(rng, model) for _ in 1:size(X, 1)]
+    N = size(X, 1)
+    if usemmap
+        (path_y, io_y) = mktemp(tempdir())
+        y = mmap(io_y, Vector{Float64}, N)
+        for i in 1:N
+            y[i] = output(rng, model)
+        end
+        return y
+    else
+        return [output(rng, model) for _ in 1:N]
+    end
 end
 
 function output(
     models::AbstractVector{ConstantModel},
     X::AbstractMatrix{Float64},
-    matching_matrix::AbstractMatrix{Bool},
+    matching_matrix::AbstractMatrix{Bool};
+    usemmap=false,
 )
-    return output(Random.default_rng(), models, X, matching_matrix)
+    return output(
+        Random.default_rng(),
+        models,
+        X,
+        matching_matrix;
+        usemmap=usemmap,
+    )
 end
 
 function output(
     rng::AbstractRNG,
     models::AbstractVector{ConstantModel},
     X::AbstractMatrix{Float64},
-    matching_matrix::AbstractMatrix{Bool},
+    matching_matrix::AbstractMatrix{Bool};
+    usemmap=false,
 )
-    outs = hcat(map(model -> output(rng, model, X), models)...)
-    return mix(models, outs, matching_matrix)
+    N = size(X, 1)
+    K = length(models)
+
+    if usemmap
+        # Note that this duplicates code somewhat from `mixing` (see below).
+        (path_y, io_y) = mktemp(tempdir())
+        y = mmap(io_y, Vector{Float64}, N)
+        outs = Vector{Float64}(undef, K)
+        mixs = Vector{Float64}(undef, K)
+        for n in 1:N
+            for k in 1:K
+                # This would be more general but constant local models don't
+                # care about x.
+                # outs[k] = output(rng, models[k], X[n])
+                outs[k] = output(rng, models[k])
+                mixs[k] = models[k].coef_mix * matching_matrix[n, k]
+            end
+            # Mixing coefficients are allowed to be `Inf` but these cases need
+            # to be handled properly. If at least one of the mixing coefficients
+            # is `Inf`, we set all non-`Inf` mixing coefficients to 0.0 and all
+            # `Inf`s to 1.0. This yields equal mixing between the rules with
+            # `Inf`s.
+            if any(isinf.(mixs))
+                mixs[(!).(isinf.(mixs))] .= 0.0
+                mixs[isinf.(mixs)] .= 1.0
+            end
+            y[n] = sum(outs .* (mixs ./ sum(mixs)))
+        end
+        return y
+    else
+        outs = hcat(map(model -> output(rng, model, X), models)...)
+        return mix(models, outs, matching_matrix)
+    end
 end
 
 function output_mean(model::ConstantModel, X::AbstractMatrix{Float64})
@@ -167,7 +222,7 @@ function mixing(
 )
     check_matching_matrix(matching_matrix)
 
-    coefs_mix = map(model -> model.coef_mix, models)
+    coefs_mix = [model.coef_mix for model in models]
     coefs_mix = coefs_mix' .* matching_matrix
 
     # Mixing coefficients are allowed to be `Inf` but these cases need to be

@@ -2,6 +2,7 @@ module Models
 
 using AutoHashEquals
 using Distributions
+using Mmap
 using Random
 
 using ..Intervals
@@ -107,30 +108,39 @@ function draw_inputs(
     n=1;
     x_min=X_MIN,
     x_max=X_MAX,
+    usemmap=false,
 )
-    return rand(rng, Uniform(x_min, x_max), n, dims)
+    if usemmap
+        (path_X, io_X) = mktemp()
+        X = mmap(io_X, Array{Float64,2}, (n, dims))
+        rand!(rng, Uniform(x_min, x_max), X)
+        return X
+    else
+        return rand(rng, Uniform(x_min, x_max), n, dims)
+    end
 end
 
-function match(model::Model, X::AbstractMatrix)
-    return elemof(X, model.conditions)
+function match(model::Model, X::AbstractMatrix; usemmap=false)
+    return elemof(X, model.conditions; usemmap=usemmap)
 end
 
-function draw_data(model::Model, n)
-    return draw_data(Random.default_rng(), model, n)
+function draw_data(model::Model, n; usemmap=false)
+    return draw_data(Random.default_rng(), model, n; usemmap=usemmap)
 end
 
-function draw_data(rng::AbstractRNG, model::Model, n)
+function draw_data(rng::AbstractRNG, model::Model, n; usemmap=false)
     X = draw_inputs(
         rng,
         dimensions(model),
         n;
         x_min=model.x_min,
         x_max=model.x_max,
+        usemmap=usemmap,
     )
-    matching_matrix = match(model, X)
-    y = output(rng, model.local_models, X, matching_matrix)
+    matching_matrix = match(model, X; usemmap=usemmap)
+    y = output(rng, model.local_models, X, matching_matrix; usemmap=usemmap)
 
-    return X, y
+    return X, y, matching_matrix
 end
 
 function LocalModels.output(
