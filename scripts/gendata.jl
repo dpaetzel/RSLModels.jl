@@ -171,6 +171,10 @@ Generate All The Tasks per seed in the given range.
             @sync @distributed for (i, (seed, d, nif, rate_coverage_min)) in
                                    iter
                 N = Int(round(200 * 10^(d / 5)))
+                # Note that the way we iterate over everything, for a fixed
+                # input space dimension `d` and a fixed seed `seed`, the input
+                # data points `X` are always the same for any `nif` and any
+                # `rate_coverage_min` (i.e. only the outputs `y` change).
                 gentodisk(;
                     d=d,
                     nif=nif,
