@@ -1,12 +1,16 @@
 module Utils
 
+using DataFrames
+using Serialization
+
 export data_coverage,
     data_overlaps,
     data_overlap_pairs,
     data_overlap_mean_norm,
     data_overlap_pairs_mean,
     data_overlap_pairs_mean_per_rule,
-    data_overlap_pairs_mean_per_ruleset
+    data_overlap_pairs_mean_per_ruleset,
+    readstats
 
 """
 Assumes that the last column of the matching matrix is all-ones due to being a
@@ -68,6 +72,35 @@ function data_coverage(matching_matrix::AbstractMatrix{Bool})
     m = matching_matrix[:, 1:(end - 1)]
 
     return sum(any(m; dims=2)) / size(matching_matrix, 1)
+end
+
+function readstats(;
+    prefix_fname::String="remote-genstats-genall",
+    suffix=".stats.jls",
+)
+    fnames = map(
+        fname -> prefix_fname * "/" * fname,
+        filter(fname -> endswith(fname, suffix), readdir(prefix_fname)),
+    )
+
+    data = deserialize.(fnames)
+    df = DataFrame(
+        map(
+            dict -> merge(
+                Dict("params." * string(k) => v for (k, v) in dict[:params]),
+                Dict("stats." * string(k) => v for (k, v) in dict[:stats]),
+            ),
+            data,
+        ),
+    )
+
+    df[!, "fname"] .= fnames
+
+    df[!, "params.d"] .= Int.(df[:, "params.d"])
+    df[!, "params.N"] .= Int.(df[:, "params.N"])
+    df[!, "params.nif"] .= Int.(df[:, "params.nif"])
+    df[!, "params.seed"] .= Int.(df[:, "params.seed"])
+    return df
 end
 
 end
