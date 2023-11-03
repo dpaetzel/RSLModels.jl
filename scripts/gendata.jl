@@ -151,6 +151,7 @@ Generate All The Tasks per seed in the given range.
     )
     n_iter = length(iter)
 
+    # TODO Deduplicate by using Utils.onall here
     # Pattern from
     # https://github.com/timholy/ProgressMeter.jl/tree/master#tips-for-parallel-programming
     # (but fixed).
@@ -166,7 +167,7 @@ Generate All The Tasks per seed in the given range.
         # The second task does the computation.
         @async begin
             # Note that we have to add a `@sync` here since otherwise the
-            # `false` is writen to the channel first.
+            # `false` is written to the channel first.
             @sync @distributed for (i, (seed, d, nif, rate_coverage_min)) in
                                    iter
                 N = Parameters.n(d)
