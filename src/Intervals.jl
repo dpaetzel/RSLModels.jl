@@ -118,7 +118,7 @@ function elemof(
 end
 
 function volume(nothing)
-    return 0
+    return 0.0
 end
 
 # The volume of input space.
@@ -262,8 +262,8 @@ function draw_center(
 end
 
 function draw_interval(
-    x::Vector{Float64},
-    spread_min;
+    x::AbstractVector{Float64},
+    spread_min::Float64;
     spread_max=Inf,
     uniform_spread=true,
     x_min=X_MIN,
@@ -282,8 +282,8 @@ end
 
 function draw_interval(
     rng::AbstractRNG,
-    x::Vector{Float64},
-    spread_min;
+    x::AbstractVector{Float64},
+    spread_min::Float64;
     spread_max=Inf,
     uniform_spread=true,
     x_min=X_MIN,
