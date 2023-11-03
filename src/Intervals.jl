@@ -7,6 +7,8 @@ using Mmap
 using Random
 using StatsBase
 
+using RSLModels.Parameters
+
 export Interval,
     dimensions,
     draw_interval,
@@ -311,7 +313,7 @@ function draw_intervals(
     spread_max::Float64=Inf,
     uniform_spread::Bool=true,
     rate_coverage_min::Float64=0.8,
-    n_samples::Int=Int(round(200 * 10^(dims / 5))),
+    n_samples::Int=Parameters.n(dims),
     remove_final_fully_overlapped::Bool=true,
     x_min=Intervals.X_MIN,
     x_max=Intervals.X_MAX,
@@ -361,7 +363,7 @@ function draw_intervals(
     spread_max::Float64=Inf,
     uniform_spread::Bool=true,
     rate_coverage_min::Float64=0.8,
-    n_samples::Int=Int(round(200 * 10^(dims / 5))),
+    n_samples::Int=Parameters.n(dims),
     remove_final_fully_overlapped::Bool=true,
     x_min=Intervals.X_MIN,
     x_max=Intervals.X_MAX,

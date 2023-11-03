@@ -9,6 +9,7 @@ using Statistics
 
 using RSLModels.Intervals
 using RSLModels.LocalModels
+using RSLModels.Parameters
 using RSLModels.Tasks
 using RSLModels.Utils
 
@@ -129,6 +130,7 @@ Generate All The Tasks per seed in the given range.
     # auto` for as many workers as there are logical cores).
     println("Running on $(nworkers()) workers.")
     @everywhere include("../src/gentodisk.jl")
+    @everywhere include("../src/Parameters.jl")
 
     remove_final_fully_overlapped = true
 
@@ -170,7 +172,7 @@ Generate All The Tasks per seed in the given range.
             # `false` is writen to the channel first.
             @sync @distributed for (i, (seed, d, nif, rate_coverage_min)) in
                                    iter
-                N = Int(round(200 * 10^(d / 5)))
+                N = Parameters.n(d)
                 # Note that the way we iterate over everything, for a fixed
                 # input space dimension `d` and a fixed seed `seed`, the input
                 # data points `X` are always the same for any `nif` and any

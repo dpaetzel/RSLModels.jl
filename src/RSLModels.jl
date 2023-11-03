@@ -6,6 +6,8 @@ using PyPlot
 using Random
 using StatsBase
 
+include("Parameters.jl")
+
 include("Intervals.jl")
 include("LocalModels.jl")
 include("MLFlowUtils.jl")

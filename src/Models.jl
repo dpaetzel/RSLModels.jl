@@ -7,6 +7,7 @@ using Random
 
 using ..Intervals
 using ..LocalModels
+using ..Parameters
 
 export Model, dimensions, draw_data, draw_model, match
 
@@ -98,14 +99,19 @@ function draw_model(
     return Model(conditions, local_models; x_min=x_min, x_max=x_max)
 end
 
-function draw_inputs(dims::Integer, n=1; x_min=X_MIN, x_max=X_MAX)
+function draw_inputs(
+    dims::Integer,
+    n::Int=Parameters.n(dims);
+    x_min=X_MIN,
+    x_max=X_MAX,
+)
     return draw_inputs(Random.default_rng(), dims, n; x_min=x_min, x_max=x_max)
 end
 
 function draw_inputs(
     rng::AbstractRNG,
     dims::Integer,
-    n=1;
+    n::Int=Parameters.n(dims);
     x_min=X_MIN,
     x_max=X_MAX,
     usemmap=false,
