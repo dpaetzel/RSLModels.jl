@@ -175,7 +175,7 @@ function load_runs(exp_name; url="http://localhost:5000")
     # Add algorithm IDs for easier plotting.
     algorithms = sort(unique(df[:, "params.algorithm"]))
     algorithm_id = Dict(algorithms .=> 1:length(algorithms))
-    df[!, "params.algorithm.id"] = [
+    df[!, "params.algorithm_id"] = [
         algorithm_id[algorithm_name] for
         algorithm_name in df[:, "params.algorithm"]
     ]
@@ -204,7 +204,7 @@ end
 
 function algorithms_inv(df)
     return Dict(
-        unique(df[:, "params.algorithm.id"] .=> df[:, "params.algorithm"]),
+        unique(df[:, "params.algorithm_id"] .=> df[:, "params.algorithm"]),
     )
 end
 
@@ -215,7 +215,7 @@ function runtimes(df; unit=Minute, yscale=identity)
     ax = Axis(fig[1, 1]; yscale=yscale)
     scatter!(
         ax,
-        df[:, "params.algorithm.id"],
+        df[:, "params.algorithm_id"],
         passmissing(Dates.value).(passmissing(ceil).(df.duration, [unit]));
         marker='+',
     )
@@ -223,7 +223,7 @@ function runtimes(df; unit=Minute, yscale=identity)
     if size(df_missing, 1) > 0
         scatter!(
             ax,
-            df_missing[:, "params.algorithm.id"],
+            df_missing[:, "params.algorithm_id"],
             Dates.value.(ceil.(df_missing.duration_min, [unit]));
             marker='?',
         )
