@@ -30,9 +30,8 @@ task (i.e. train/test data etc.) to disk.
 - `--rate-coverage-min`:
 - `--remove-final-fully-overlapped`:
 - `--spread-min-factor`:
-- `--full`: Whether to generate the full data (if not, only generate statistics;
-            much faster due to much less IO esp. for many input space
-            dimensions).
+- `--statsonly`: Whether to generate the data stats only (much faster due to
+            much less IO esp. for many input space dimensions).
 - `--prefix-fname`:
 """
 @cast function gen(;
@@ -42,7 +41,7 @@ task (i.e. train/test data etc.) to disk.
     seed::Int=0,
     rate_coverage_min::Float64=0.8,
     remove_final_fully_overlapped::Bool=false,
-    full::Bool=false,
+    statsonly::Bool=false,
     prefix_fname::String="data/$d-$nif-$N-$seed-$rate_coverage_min-$remove_final_fully_overlapped",
 )
     # TODO Consider to store model (but not generated data)
@@ -54,7 +53,7 @@ task (i.e. train/test data etc.) to disk.
         seed=seed,
         rate_coverage_min=rate_coverage_min,
         remove_final_fully_overlapped=remove_final_fully_overlapped,
-        full=full,
+        full=!statsonly,
         prefix_fname=prefix_fname,
     )
 
@@ -73,9 +72,8 @@ and the sample to disk.
 - `--spread-min-factor`:
 - `--startseed`:
 - `--endseed`:
-- `--full`: Whether to generate the full data (if not, only generate statistics;
-            much faster due to much less IO esp. for many input space
-            dimensions).
+- `--statsonly`: Whether to generate the data stats only (much faster due to
+            much less IO esp. for many input space dimensions).
 - `--prefix-fname`:
 """
 @cast function genmany(;
@@ -84,7 +82,7 @@ and the sample to disk.
     N::Int=200,
     startseed::Int=0,
     endseed::Int=9,
-    full::Bool=false,
+    statsonly::Bool=false,
     prefix_fname::String="data/$d-$nif-$N",
 )
     println(
@@ -97,7 +95,7 @@ and the sample to disk.
             nif=nif,
             N=N,
             seed=seed,
-            full=full,
+            statsonly=statsonly,
             prefix_fname="$prefix_fname-$seed",
         )
     end
@@ -110,9 +108,8 @@ Generate All The Tasks per seed in the given range.
 
 - `--startseed`:
 - `--endseed`:
-- `--full`: Whether to generate the full data (if not, only generate statistics;
-            much faster due to much less IO esp. for many input space
-            dimensions).
+- `--statsonly`: Whether to generate the data stats only (much faster due to
+            much less IO esp. for many input space dimensions).
 - `--usemmap`: Whether to memory-map large arrays (X, y, matching matrices, …)
             to disk and save RAM that way.
 - `--prefix-fname`:
@@ -120,7 +117,7 @@ Generate All The Tasks per seed in the given range.
 @cast function genall(;
     startseed::Int=0,
     endseed::Int=9,
-    full::Bool=false,
+    statsonly::Bool=false,
     usemmap::Bool=false,
     prefix_fname::String="data/genstats/genall",
 )
@@ -184,7 +181,7 @@ Generate All The Tasks per seed in the given range.
                     seed=seed,
                     rate_coverage_min=rate_coverage_min,
                     remove_final_fully_overlapped=remove_final_fully_overlapped,
-                    full=full,
+                    full=!statsonly,
                     usemmap=usemmap,
                     prefix_fname="$prefix_fname/$d-$nif-$N-$seed-$rate_coverage_min-$remove_final_fully_overlapped",
                 )
