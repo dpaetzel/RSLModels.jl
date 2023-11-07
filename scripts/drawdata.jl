@@ -1,12 +1,10 @@
 using AlgebraOfGraphics
 using Base.Filesystem
 using CairoMakie
-using Comonicon
 using DataFrames
 using Dates
 using KittyTerminalImages
 using LaTeXStrings
-using MLJ
 using ProgressBars
 using Serialization
 using Statistics
@@ -17,10 +15,27 @@ using RSLModels.Tasks
 using RSLModels.Utils
 using RSLModels.Plots
 
-function analyse(folder="2023-10-27-data-full-12d")
+# bins = [0.7, 0.8, 0.9, 0.95]
+bins = [0.7, 0.8, 0.9]
+
+# We aim at having this many learning tasks per combination of d, K and coverage bin.
+n_per_d_k_coverage = 4
+Ks = [3, 5, 7, 10, 15, 20, 30]
+
+mapping_grid = mapping(;
+    row="stats.coverage_bin" => nonnumeric,
+    col="params.d" => nonnumeric,
+)
+
+function analyse(;
+    folder="2023-10-27-data-full-12d",
+    bins=bins,
+    n_per_d_k_coverage=n_per_d_k_coverage,
+    Ks=Ks,
+)
     df = readstats(; prefix_fname=folder)
 
-    println("🎉 Read $(size(df, 1)) data set statistics from $folder.")
+    println("$mjgood Read $(size(df, 1)) data set statistics from $folder.")
 
     if all(
         df[df[:, "stats.K"] .== 2, :][
@@ -28,7 +43,7 @@ function analyse(folder="2023-10-27-data-full-12d")
             "stats.overlap_pairs_mean_per_rule",
         ] .== 0,
     )
-        println("✅ All sets with K=2 have an overlap of 0, as expected.")
+        println("$mjgood All sets with K=2 have an overlap of 0, as expected.")
     end
 
     # Check whether all is dandy.
@@ -42,8 +57,6 @@ function analyse(folder="2023-10-27-data-full-12d")
             "fname" => (df_ -> size(df_, 1)) => "n_datasets",
         ),
     )
-
-    bins = [0.7, 0.8, 0.9, 0.95]
 
     # Filter for `coverage >= 0.7` (may not be fulfilled by a margin due to coverage
     # computation being sample-based but we have enough data to just discard these
@@ -61,10 +74,6 @@ function analyse(folder="2023-10-27-data-full-12d")
         coverage -> bins[searchsortedlast(bins, coverage)],
         df[:, "stats.coverage"],
     )
-
-    # We aim at having this many learning tasks per combination of d, K and coverage bin.
-    n_per_d_k_coverage = 4
-    Ks = [3, 5, 7, 10, 15, 20, 30]
 
     n_dims = length(unique(df[:, "params.d"]))
     n_overlap = length(bins)
@@ -146,8 +155,13 @@ function analyse(folder="2023-10-27-data-full-12d")
     # discarded (see above) all of the tasks within one of the groups.
     df_sel[!, "fname"] =
         map(pair -> size(pair[2], 1) > 0 ? pair[2][!, "fname"] : [], df_sel.x1)
-    # Flatten wrt to the file names (which are vectors up until now).
+    df_sel[!, "nif"] = map(
+        pair -> size(pair[2], 1) > 0 ? pair[2][!, "params.nif"] : [],
+        df_sel.x1,
+    )
+    # Flatten wrt to the file names and nif (which are vectors up until now).
     df_sel = flatten(df_sel, "fname")
+    df_sel = flatten(df_sel, "nif")
 
     # # Next make sure that all the combinations are in the DataFrame (we only
     # # draw from existing combinations above).
@@ -178,6 +192,27 @@ function analyse(folder="2023-10-27-data-full-12d")
         ),
     )
 
+    println("\n")
+    draw(
+        data(df_sel) *
+        frequency() *
+        mapping(
+            "nif" => nonnumeric;
+            row="stats.coverage_bin" => nonnumeric,
+            col="params.d" => nonnumeric,
+        ),
+    ) |> display
+
+    println("\n")
+    draw(data(df) * mapping_grid * mapping("stats.K") * frequency()) |> display
+
+    draw(
+        data(df) *
+        mapping_grid *
+        mapping("stats.K", "params.nif") *
+        histogram(),
+    ) |> display
+
     function write_fishscript(df_sel)
         length_df_sel = size(df_sel, 1)
 
@@ -203,5 +238,7 @@ function analyse(folder="2023-10-27-data-full-12d")
         return nothing
     end
 
-    return write_fishscript(df_sel)
+    # return write_fishscript(df_sel)
+
+    return df
 end
