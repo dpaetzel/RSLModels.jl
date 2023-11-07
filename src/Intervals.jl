@@ -350,6 +350,9 @@ function draw_intervals(
     x_min=Intervals.X_MIN,
     x_max=Intervals.X_MAX,
     spread_min::Float64=(x_max - x_min) / nif / 2,
+    n_intervals_max::Int=nothing,
+    return_coverage_rate::Bool=false,
+    verbose::Int=0,
 )
     return draw_intervals(
         Random.default_rng(),
@@ -363,6 +366,9 @@ function draw_intervals(
         x_min=x_min,
         x_max=x_max,
         spread_min=spread_min,
+        n_intervals_max=n_intervals_max,
+        return_coverage_rate=return_coverage_rate,
+        verbose=verbose,
     )
 end
 
@@ -400,13 +406,26 @@ function draw_intervals(
     x_min=Intervals.X_MIN,
     x_max=Intervals.X_MAX,
     spread_min::Float64=(x_max - x_min) / nif / 2,
+    n_intervals_max::Int=nothing,
+    return_coverage_rate::Bool=false,
+    verbose::Int=0,
 )
     X = rand(rng, n_samples, dims) .* (x_max - x_min)
     M = []
     matched = fill(false, n_samples)
     intervals::AbstractVector{Interval} = []
 
-    while count(matched) / n_samples < rate_coverage_min
+    rate_coverage = 0.0
+
+    while rate_coverage < rate_coverage_min &&
+        (n_intervals_max == nothing || length(intervals) < n_intervals_max)
+        if verbose >= 10
+            println(
+                "Current coverage: $(round(rate_coverage; digits=2)) " *
+                "of required $rate_coverage_min",
+            )
+        end
+
         idx = rand(rng, 1:n_samples)
         # Note that this may use the same `x` for multiple intervals which is
         # probably not wanted. However, filtering for unmatched `x` is probably
@@ -438,16 +457,22 @@ function draw_intervals(
             push!(intervals, interval)
             push!(M, m)
             matched = matched_new
+            rate_coverage = count(matched) / n_samples
         end
     end
 
-    if remove_final_fully_overlapped
+    intervals_final = if remove_final_fully_overlapped
+        if verbose >= 10
+            println("Removing fully overlapped intervals …")
+        end
         # Note that we have to `hcat` `M` because it is a vector of vectors.
-        return remove_fully_overlapped(
-            intervals,
-            X;
-            matching_matrix=hcat(M...),
-        )
+        remove_fully_overlapped(intervals, X; matching_matrix=hcat(M...))
+    else
+        intervals
+    end
+
+    if return_coverage_rate
+        return rate_coverage, intervals
     else
         return intervals
     end
