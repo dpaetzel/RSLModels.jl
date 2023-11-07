@@ -12,6 +12,9 @@ export data_coverage,
     data_overlap_pairs_mean,
     data_overlap_pairs_mean_per_rule,
     data_overlap_pairs_mean_per_ruleset,
+    mjbad,
+    mjgood,
+    mjtada,
     onall,
     readstats
 
@@ -154,5 +157,9 @@ function onall(f, iter)
 
     return outs
 end
+
+mjtada = "🎉"
+mjgood = "✅"
+mjbad = "❎"
 
 end
