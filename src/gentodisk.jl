@@ -50,6 +50,7 @@ function gentodisk(;
     mae_test_linear = mae(y_test_pred, y_test)
 
     stats = Dict(
+        :rate_coverage_min => rate_coverage_min,
         :K => length(task.model.conditions),
         :coverage => data_coverage(match_X),
         :overlap_pairs_mean_per_ruleset =>
