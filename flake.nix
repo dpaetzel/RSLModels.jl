@@ -24,7 +24,8 @@
               languages.python.enable = true;
               languages.python.package =
                 # setuptools is required by mlflow, it seems.
-                pkgs.python310.withPackages (ps: [ ps.matplotlib ps.mlflow ps.setuptools ]);
+                pkgs.python310.withPackages
+                (ps: [ ps.matplotlib ps.mlflow ps.optuna ps.setuptools ]);
 
               languages.julia.enable = true;
             }];
