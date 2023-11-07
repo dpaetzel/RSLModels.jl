@@ -260,4 +260,18 @@ function check(df)
     return nothing
 end
 
+function DataFrames.flatten(dict::Dict, key_hierarchy::AbstractVector)
+    pairs_all = []
+    for (key, val) in pairs(dict)
+        if val isa Dict
+            for pair in flatten(val, vcat(key_hierarchy, key))
+                push!(pairs_all, pair)
+            end
+        else
+            push!(pairs_all, vcat(key_hierarchy, key) => val)
+        end
+    end
+    return pairs_all
+end
+
 end
