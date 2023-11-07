@@ -3,7 +3,9 @@ module Intervals
 using AutoHashEquals
 using Distributions
 using LinearAlgebra
+using Memoize
 using Mmap
+using Optim
 using Random
 using StatsBase
 
@@ -27,9 +29,6 @@ __revise_mode__ = :evalassign
 
 const X_MIN::Float64 = 0.0
 const X_MAX::Float64 = 1.0
-
-# TODO Consider to move this global constant somewhere
-const dist_spread = Beta(1.55, 2.74)
 
 @auto_hash_equals struct Interval
     lbound::AbstractVector{Float64}
@@ -162,6 +161,7 @@ function draw_spread(
     dims::Integer,
     spread_min;
     spread_max=Inf,
+    params=(1.0, 1.0),
     x_min=X_MIN,
     x_max=X_MAX,
     uniform=false,
@@ -171,6 +171,7 @@ function draw_spread(
         dims,
         spread_min;
         spread_max=spread_max,
+        params=params,
         x_min=x_min,
         x_max=x_max,
         uniform=uniform,
@@ -182,6 +183,8 @@ function draw_spread(
     dims::Integer,
     spread_min;
     spread_max=Inf,
+    # TODO Rename to params_spread_rate since unit scale
+    params=(1.0, 1.0),
     x_min=X_MIN,
     x_max=X_MAX,
     uniform=false,
@@ -193,11 +196,9 @@ function draw_spread(
             ),
         )
     end
-    if uniform
-        rates_spread = rand(rng, dims)
-    else
-        rates_spread = rand(rng, dist_spread, dims)
-    end
+
+    rates_spread = rand(rng, Beta(params...), dims)
+
     spread_max = min((x_max - x_min) / 2, spread_max)
     return spread_min .+ rates_spread .* (spread_max - spread_min)
 end
@@ -267,7 +268,7 @@ function draw_interval(
     x::AbstractVector{Float64},
     spread_min::Float64;
     spread_max=Inf,
-    uniform_spread=true,
+    params_spread::Tuple{Float64,Float64}=(1.0, 1.0),
     x_min=X_MIN,
     x_max=X_MAX,
 )
@@ -276,7 +277,7 @@ function draw_interval(
         x,
         spread_min;
         spread_max=spread_max,
-        uniform_spread=uniform_spread,
+        params_spread=params_spread,
         x_min=x_min,
         x_max=x_max,
     )
@@ -287,7 +288,7 @@ function draw_interval(
     x::AbstractVector{Float64},
     spread_min::Float64;
     spread_max=Inf,
-    uniform_spread=true,
+    params_spread::Tuple{Float64,Float64}=(1.0, 1.0),
     x_min=X_MIN,
     x_max=X_MAX,
 )
@@ -297,7 +298,7 @@ function draw_interval(
         dims,
         spread_min;
         spread_max=spread_max,
-        uniform=uniform_spread,
+        params=params_spread,
         x_min=x_min,
         x_max=x_max,
     )
@@ -306,30 +307,62 @@ function draw_interval(
     return Interval(center - spread, center + spread)
 end
 
+@memoize function my_params_spread(dims, nif)
+    # TODO This is problematic: spread_ideal_cubes allows for setting
+    # x_min/x_max but here we assume a unit cube
+    s_ideal = Intervals.spread_ideal_cubes(dims, nif)
+
+    function delta(fit, actual)
+        return sum((fit .- actual) .^ 2)
+    end
+
+    function objective(theta, x, prob)
+        fit = cdf(Beta(theta[1], theta[2]), x)
+        return delta(fit, prob)
+    end
+
+    x = [s_ideal, s_ideal - 0.5 * s_ideal, s_ideal + 0.5 * s_ideal]
+    cdf_x = [0.5, 0.25, 0.75]
+
+    start = [1.0, 1.0]
+    sol = optimize(
+        theta -> objective(theta, x, cdf_x),
+        # Lower bound for the parameters.
+        [0.0, 0.0],
+        # Upper bound for the parameters.
+        [Inf, Inf],
+        start,
+    )
+
+    a, b = Optim.minimizer(sol)
+
+    return a, b
+end
+
 function draw_intervals(
     dims::Integer;
     nif=20,
-    spread_min::Float64=Intervals.spread_ideal_cubes(dims, nif),
     spread_max::Float64=Inf,
-    uniform_spread::Bool=true,
+    params_spread::Tuple{Float64,Float64}=my_params_spread(dims, nif),
     rate_coverage_min::Float64=0.8,
     n_samples::Int=Parameters.n(dims),
     remove_final_fully_overlapped::Bool=true,
     x_min=Intervals.X_MIN,
     x_max=Intervals.X_MAX,
+    spread_min::Float64=(x_max - x_min) / nif / 2,
 )
     return draw_intervals(
         Random.default_rng(),
         dims;
         nif=nif,
-        spread_min=spread_min,
         spread_max=spread_max,
-        uniform_spread=uniform_spread,
+        params_spread=params_spread,
         rate_coverage_min=rate_coverage_min,
         n_samples=n_samples,
         remove_final_fully_overlapped=remove_final_fully_overlapped,
         x_min=x_min,
         x_max=x_max,
+        spread_min=spread_min,
     )
 end
 
@@ -348,7 +381,7 @@ Generate random intervals for `dim` dimensions.
   which are cute.
 - `spread_min::Float64`:
 - `spread_max::Float64`:
-- `uniform_spread::Bool`:
+- `params_spread::Tuple{Float64, Float64}`: a and b parameters for the beta distribution.
 - `rate_coverage_min::Float64`: [0, 1].
 - `n_samples`:
 - `remove_final_fully_overlapped`:
@@ -359,30 +392,34 @@ function draw_intervals(
     rng::AbstractRNG,
     dims::Int;
     nif=20,
-    spread_min::Float64=Intervals.spread_ideal_cubes(dims, nif),
     spread_max::Float64=Inf,
-    uniform_spread::Bool=true,
+    params_spread::Tuple{Float64,Float64}=my_params_spread(dims, nif),
     rate_coverage_min::Float64=0.8,
     n_samples::Int=Parameters.n(dims),
     remove_final_fully_overlapped::Bool=true,
     x_min=Intervals.X_MIN,
     x_max=Intervals.X_MAX,
+    spread_min::Float64=(x_max - x_min) / nif / 2,
 )
     X = rand(rng, n_samples, dims) .* (x_max - x_min)
     M = []
     matched = fill(false, n_samples)
-    intervals::Vector{Interval} = []
+    intervals::AbstractVector{Interval} = []
 
     while count(matched) / n_samples < rate_coverage_min
         idx = rand(rng, 1:n_samples)
+        # Note that this may use the same `x` for multiple intervals which is
+        # probably not wanted. However, filtering for unmatched `x` is probably
+        # not that much cheaper than just trying any `x` and possibly discarding
+        # the interval.
         x = X[idx, :]
 
         interval = draw_interval(
             rng,
             x,
-            spread_min;
+            Intervals.spread_ideal_cubes(dims, nif; factor=0.1);
             spread_max=spread_max,
-            uniform_spread=uniform_spread,
+            params_spread=params_spread,
             x_min=x_min,
             x_max=x_max,
         )
@@ -453,17 +490,23 @@ function remove_fully_overlapped(
     return intervals[parentindices(view_intervals)...]
 end
 
+# TODO Rename this to …unit and replace x_min/x_max with 0/1
 """
 Given a number of intervals and an input space dimensions, compute the spread
 that a cube would have with a volume of `1/n_intervals` of input space volume.
+
+`factor` is a factor of the *volume* of what we call an ideal cube. I.e. we
+compute the spread that a cube would have with a volume of `1/n_intervals *
+factor` of input space volume.
 """
 function spread_ideal_cubes(
     dims::Integer,
     n_intervals;
+    factor=1.0,
     x_min=X_MIN,
     x_max=X_MAX,
 )
-    volume_avg = (x_max - x_min)^dims / n_intervals
+    volume_avg = factor * (x_max - x_min)^dims / n_intervals
     return volume_avg^(1.0 / dims) / 2.0
 end
 
