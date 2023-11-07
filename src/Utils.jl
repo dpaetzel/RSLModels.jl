@@ -1,6 +1,8 @@
 module Utils
 
 using DataFrames
+using Distributed
+using ProgressMeter
 using Serialization
 
 export data_coverage,
@@ -10,6 +12,7 @@ export data_coverage,
     data_overlap_pairs_mean,
     data_overlap_pairs_mean_per_rule,
     data_overlap_pairs_mean_per_ruleset,
+    onall,
     readstats
 
 """
@@ -101,6 +104,55 @@ function readstats(;
     df[!, "params.nif"] .= Int.(df[:, "params.nif"])
     df[!, "params.seed"] .= Int.(df[:, "params.seed"])
     return df
+end
+
+"""
+Use all the available workers to run the function `f` on each element of `iter`
+in parallel. Use display progress using a progress bar.
+
+Note that `onall` does *not* load code onto workers, i.e. you have to
+`@everywhere include(…)` yourself any not-automatically-loaded code used by `f`
+before calling `onall`.
+"""
+function onall(f, iter)
+    n_iter = length(iter)
+
+    # Pattern from
+    # https://github.com/timholy/ProgressMeter.jl/tree/master#tips-for-parallel-programming
+    # (but fixed).
+    prog = Progress(n_iter)
+    channel = RemoteChannel(() -> Channel{Bool}())
+    channel_out = RemoteChannel(() -> Channel{Tuple{Int64,Any,Any}}())
+
+    outs = Vector{Tuple{Any,Any}}(undef, n_iter)
+
+    @sync begin
+        # The first task updates the progress bar and collects the results.
+        @async while take!(channel)
+            (i, elem, out) = take!(channel_out)
+            outs[i] = (elem, out)
+            next!(prog)
+        end
+
+        # The second task does the computation.
+        @async begin
+            # Note that we have to add a `@sync` here since otherwise the
+            # `false` is written to the channel first.
+            @sync @distributed for (i, elem) in collect(enumerate(iter))
+                out = f(elem...)
+
+                # Trigger process bar update and result fetching.
+                put!(channel, true)
+
+                # Push result.
+                put!(channel_out, (i, elem, out))
+            end
+            # Tell the progress bar and result fetching task to finish.
+            put!(channel, false)
+        end
+    end
+
+    return outs
 end
 
 end
