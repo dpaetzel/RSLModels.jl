@@ -1,3 +1,4 @@
+using Comonicon
 using Dates
 using Distributed
 using Distributions
@@ -6,58 +7,33 @@ using ProgressMeter
 using RSLModels.Intervals
 using RSLModels.Utils
 
-# `includet(thisfile.jl)`.
-__revise_mode__ = :evalassign
-
 DXs = [1, 2, 3, 5, 10, 15]
 Ks = [5, 10, 15, 20, 25, 30, 35, 40]
 rates_coverage_min = [0.7, 0.8, 0.9]
 
-function mysample1(;
-    n_samples=21,
+"""
+Sample the condition set–drawing process many times and write statistics (most
+importantly, number of rules and coverage) to a CSV file (name generated based
+on current time) which can later be used to optimize the parameters of said
+process.
+
+# Args
+
+- `n_iter`: Number of times to sample.
+
+# Options
+
+- `--n-samples`: Number of samples to draw each time (to later be able to
+  estimate distribution statistics such as mean).
+"""
+@main function mysample(
+    n_iter::Int;
+    n_samples::Int=21,
     DXs=DXs,
     rates_coverage_min=rates_coverage_min,
 )
-    DX = rand(DXs)
-    rate_coverage_min = rand(rates_coverage_min)
+    @everywhere include((@__DIR__) * "/_genkdata.jl")
 
-    # TODO Consider to use a slightly informed distribution for `spread_min`.
-    # spread_min = hist(rand(Beta(2, 2), 10000) / 2; bins=30)
-    spread_min = rand() / 2
-
-    # TODO Consider to invest time in choosing sensible ranges here
-    a = rand() * 200 + 1
-    b = rand() * 200 + 1
-
-    rates_coverage = Vector{Float64}(undef, n_samples)
-    Ks = Vector{Int}(undef, n_samples)
-
-    for i in 1:n_samples
-        rates_coverage[i], intervals = draw_intervals(
-            DX;
-            rate_coverage_min=rate_coverage_min,
-            params_spread=(a, b),
-            spread_min=spread_min,
-            n_intervals_max=100,
-            return_coverage_rate=true,
-            # verbose=10,
-        )
-
-        Ks[i] = length(intervals)
-    end
-
-    return Dict(
-        :DX => DX,
-        :rate_coverage_min => rate_coverage_min,
-        :spread_min => spread_min,
-        :a => a,
-        :b => b,
-        :rates_coverage => rates_coverage,
-        :Ks => Ks,
-    )
-end
-
-function mysample(n_iter; DXs=DXs, rates_coverage_min=rates_coverage_min)
     # Pattern from
     # https://github.com/timholy/ProgressMeter.jl/tree/master#tips-for-parallel-programming
     # (but fixed).
@@ -103,8 +79,11 @@ function mysample(n_iter; DXs=DXs, rates_coverage_min=rates_coverage_min)
             # Note that we have to add a `@sync` here since otherwise the
             # `false` is written to the channel first.
             @sync @distributed for i in 1:n_iter
-                out =
-                    mysample1(; DXs=DXs, rates_coverage_min=rates_coverage_min)
+                out = mysample1(;
+                    n_samples=n_samples,
+                    DXs=DXs,
+                    rates_coverage_min=rates_coverage_min,
+                )
 
                 # Trigger process bar update and result fetching.
                 put!(channel, true)
