@@ -83,6 +83,7 @@ process.
                     n_samples=n_samples,
                     DXs=DXs,
                     rates_coverage_min=rates_coverage_min,
+                    usemmap=true,
                 )
 
                 # Trigger process bar update and result fetching.

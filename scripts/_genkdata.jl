@@ -12,6 +12,7 @@ function mysample1(;
     n_samples=21,
     DXs=DXs,
     rates_coverage_min=rates_coverage_min,
+    usemmap=false,
 )
     DX = rand(DXs)
     rate_coverage_min = rand(rates_coverage_min)
@@ -33,6 +34,7 @@ function mysample1(;
             rate_coverage_min=rate_coverage_min,
             params_spread=(a, b),
             spread_min=spread_min,
+            usemmap=usemmap,
             n_intervals_max=100,
             return_coverage_rate=true,
             # verbose=10,

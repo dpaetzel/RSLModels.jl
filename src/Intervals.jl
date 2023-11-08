@@ -347,10 +347,11 @@ function draw_intervals(
     rate_coverage_min::Float64=0.8,
     n_samples::Int=Parameters.n(dims),
     remove_final_fully_overlapped::Bool=true,
-    x_min=Intervals.X_MIN,
-    x_max=Intervals.X_MAX,
+    x_min::Float64=Intervals.X_MIN,
+    x_max::Float64=Intervals.X_MAX,
     spread_min::Float64=(x_max - x_min) / nif / 2,
-    n_intervals_max::Int=nothing,
+    usemmap::Bool=false,
+    n_intervals_max::Union{Int,Nothing}=nothing,
     return_coverage_rate::Bool=false,
     verbose::Int=0,
 )
@@ -366,6 +367,7 @@ function draw_intervals(
         x_min=x_min,
         x_max=x_max,
         spread_min=spread_min,
+        usemmap=usemmap,
         n_intervals_max=n_intervals_max,
         return_coverage_rate=return_coverage_rate,
         verbose=verbose,
@@ -397,20 +399,31 @@ Generate random intervals for `dim` dimensions.
 function draw_intervals(
     rng::AbstractRNG,
     dims::Int;
-    nif=20,
+    nif::Int=20,
     spread_max::Float64=Inf,
     params_spread::Tuple{Float64,Float64}=my_params_spread(dims, nif),
     rate_coverage_min::Float64=0.8,
     n_samples::Int=Parameters.n(dims),
     remove_final_fully_overlapped::Bool=true,
-    x_min=Intervals.X_MIN,
-    x_max=Intervals.X_MAX,
+    x_min::Float64=Intervals.X_MIN,
+    x_max::Float64=Intervals.X_MAX,
     spread_min::Float64=(x_max - x_min) / nif / 2,
-    n_intervals_max::Int=nothing,
+    usemmap::Bool=false,
+    n_intervals_max::Union{Int,Nothing}=nothing,
     return_coverage_rate::Bool=false,
     verbose::Int=0,
 )
-    X = rand(rng, n_samples, dims) .* (x_max - x_min)
+    if usemmap
+        (path_X, io_X) = mktemp(tempdir())
+        X = mmap(io_X, Matrix{Float64}, (n_samples, dims))
+        for i in eachindex(X)
+            X[i] = rand(rng) * (x_max - x_min)
+        end
+    else
+        X = rand(rng, n_samples, dims) .* (x_max - x_min)
+    end
+
+    # TODO Use mmap for M as well? But then I have to preallocate or grow?
     M = []
     matched = fill(false, n_samples)
     intervals::AbstractVector{Interval} = []
@@ -443,7 +456,7 @@ function draw_intervals(
             x_max=x_max,
         )
 
-        m = elemof(X, interval)
+        m = elemof(X, interval; usemmap=usemmap)
 
         # If the just-created interval is fully covered by the other intervals
         # (at least as measured by looking at `X`), then do retry.
@@ -466,7 +479,7 @@ function draw_intervals(
             println("Removing fully overlapped intervals …")
         end
         # Note that we have to `hcat` `M` because it is a vector of vectors.
-        remove_fully_overlapped(intervals, X; matching_matrix=hcat(M...))
+        remove_fully_overlapped(intervals, X; matching_matrix=reduce(hcat, M))
     else
         intervals
     end
