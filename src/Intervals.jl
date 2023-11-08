@@ -424,7 +424,7 @@ function draw_intervals(
     end
 
     # TODO Use mmap for M as well? But then I have to preallocate or grow?
-    M = []
+    M = Vector{Bool}[]
     matched = fill(false, n_samples)
     intervals::AbstractVector{Interval} = []
 
