@@ -488,7 +488,9 @@ function draw_intervals(
 
     # Not 100% sure whether this reassignment is necessary.
     X = 0.0
-    close(io_X)
+    if usemmap
+        close(io_X)
+    end
 
     if return_coverage_rate
         return rate_coverage, intervals
