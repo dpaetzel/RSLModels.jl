@@ -4,9 +4,8 @@ using Distributions
 
 using RSLModels.Intervals
 
-DXs = [1, 2, 3, 5, 10, 15]
-Ks = [5, 10, 15, 20, 25, 30, 35, 40]
-rates_coverage_min = [0.7, 0.8, 0.9]
+DXs = [2, 3, 5, 8, 10, 13]
+rates_coverage_min = [0.75, 0.9]
 
 function mysample1(;
     n_samples=21,
@@ -35,7 +34,7 @@ function mysample1(;
             params_spread=(a, b),
             spread_min=spread_min,
             usemmap=usemmap,
-            n_intervals_max=100,
+            n_intervals_max=50,
             return_coverage_rate=true,
             # verbose=10,
         )
