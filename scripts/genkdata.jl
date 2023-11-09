@@ -7,9 +7,8 @@ using ProgressMeter
 using RSLModels.Intervals
 using RSLModels.Utils
 
-DXs = [1, 2, 3, 5, 10, 15]
-Ks = [5, 10, 15, 20, 25, 30, 35, 40]
-rates_coverage_min = [0.7, 0.8, 0.9]
+DXs = [2, 3, 5, 8, 10, 13]
+rates_coverage_min = [0.75, 0.9]
 
 """
 Sample the condition set–drawing process many times and write statistics (most
