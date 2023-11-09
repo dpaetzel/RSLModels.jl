@@ -85,6 +85,8 @@ end
 
 function elemof(X::AbstractMatrix{Float64}, interval::Interval; usemmap=false)
     N = size(X, 1)
+    # TODO Return the handle as well so it can be closed (same for all other
+    # mmap usages)
     if usemmap
         (path_out, io_out) = mktemp(tempdir())
         out = mmap(io_out, Vector{Bool}, N)
@@ -483,6 +485,10 @@ function draw_intervals(
     else
         intervals
     end
+
+    # Not 100% sure whether this reassignment is necessary.
+    X = 0.0
+    close(io_X)
 
     if return_coverage_rate
         return rate_coverage, intervals
