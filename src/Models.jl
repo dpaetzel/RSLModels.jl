@@ -42,12 +42,12 @@ function Intervals.dimensions(model::Model)
 end
 
 function draw_model(
-    dims::Integer,
-    nif::Integer;
+    dims::Integer;
     # Note that these are the same default values as the ones given for
     # `Intervals.draw_intervals`.
-    spread_min=Intervals.spread_ideal_cubes(dims, nif),
+    spread_min=0.0,
     spread_max=Inf,
+    params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
     rate_coverage_min::Float64=0.8,
     remove_final_fully_overlapped::Bool=true,
     x_min=X_MIN,
@@ -55,10 +55,10 @@ function draw_model(
 )
     return draw_model(
         Random.default_rng(),
-        dims,
-        nif;
+        dims;
         spread_min=spread_min,
         spread_max=spread_max,
+        params_spread=params_spread,
         rate_coverage_min=rate_coverage_min,
         remove_final_fully_overlapped=remove_final_fully_overlapped,
         x_min=x_min,
@@ -68,12 +68,12 @@ end
 
 function draw_model(
     rng::AbstractRNG,
-    dims::Integer,
-    nif::Integer;
+    dims::Integer;
     # Note that these are the same default values as the ones given for
     # `Intervals.draw_intervals`.
-    spread_min=Intervals.spread_ideal_cubes(dims, nif),
+    spread_min=0.0,
     spread_max=Inf,
+    params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
     rate_coverage_min::Float64=0.8,
     remove_final_fully_overlapped::Bool=true,
     x_min=X_MIN,
@@ -82,9 +82,9 @@ function draw_model(
     conditions = draw_intervals(
         rng,
         dims;
-        nif=nif,
         spread_min=spread_min,
         spread_max=spread_max,
+        params_spread=params_spread,
         rate_coverage_min=rate_coverage_min,
         remove_final_fully_overlapped=remove_final_fully_overlapped,
         x_min=x_min,

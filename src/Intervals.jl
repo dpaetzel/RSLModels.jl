@@ -160,36 +160,32 @@ end
 # cleanly right now (i.e. without having to do `unsigned(10)` or `0xa` or
 # similar).
 function draw_spread(
-    dims::Integer,
-    spread_min;
+    dims::Integer;
+    spread_min::Float64=0.0,
     spread_max=Inf,
-    params=(1.0, 1.0),
+    params::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
     x_min=X_MIN,
     x_max=X_MAX,
-    uniform=false,
 )
     return draw_spread(
         Random.default_rng(),
-        dims,
-        spread_min;
+        dims;
+        spread_min=spread_min,
         spread_max=spread_max,
         params=params,
         x_min=x_min,
         x_max=x_max,
-        uniform=uniform,
     )
 end
 
 function draw_spread(
     rng::AbstractRNG,
-    dims::Integer,
-    spread_min;
+    dims::Integer;
+    spread_min::Float64=0.0,
     spread_max=Inf,
-    # TODO Rename to params_spread_rate since unit scale
-    params=(1.0, 1.0),
+    params::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
     x_min=X_MIN,
     x_max=X_MAX,
-    uniform=false,
 )
     if spread_min > spread_max
         throw(
@@ -199,7 +195,7 @@ function draw_spread(
         )
     end
 
-    rates_spread = rand(rng, Beta(params...), dims)
+    rates_spread = rand(rng, Beta(params.a, params.b), dims)
 
     spread_max = min((x_max - x_min) / 2, spread_max)
     return spread_min .+ rates_spread .* (spread_max - spread_min)
@@ -267,17 +263,17 @@ function draw_center(
 end
 
 function draw_interval(
-    x::AbstractVector{Float64},
-    spread_min::Float64;
+    x::AbstractVector{Float64};
+    spread_min::Float64=0.0,
     spread_max=Inf,
-    params_spread::Tuple{Float64,Float64}=(1.0, 1.0),
+    params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
     x_min=X_MIN,
     x_max=X_MAX,
 )
     return draw_interval(
         Random.default_rng(),
-        x,
-        spread_min;
+        x;
+        spread_min,
         spread_max=spread_max,
         params_spread=params_spread,
         x_min=x_min,
@@ -287,18 +283,18 @@ end
 
 function draw_interval(
     rng::AbstractRNG,
-    x::AbstractVector{Float64},
-    spread_min::Float64;
+    x::AbstractVector{Float64};
+    spread_min::Float64=0.0,
     spread_max=Inf,
-    params_spread::Tuple{Float64,Float64}=(1.0, 1.0),
+    params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
     x_min=X_MIN,
     x_max=X_MAX,
 )
     dims = size(x, 1)
     spread = draw_spread(
         rng,
-        dims,
-        spread_min;
+        dims;
+        spread_min=spread_min,
         spread_max=spread_max,
         params=params_spread,
         x_min=x_min,
@@ -309,49 +305,16 @@ function draw_interval(
     return Interval(center - spread, center + spread)
 end
 
-@memoize function my_params_spread(dims, nif)
-    # TODO This is problematic: spread_ideal_cubes allows for setting
-    # x_min/x_max but here we assume a unit cube
-    s_ideal = Intervals.spread_ideal_cubes(dims, nif)
-
-    function delta(fit, actual)
-        return sum((fit .- actual) .^ 2)
-    end
-
-    function objective(theta, x, prob)
-        fit = cdf(Beta(theta[1], theta[2]), x)
-        return delta(fit, prob)
-    end
-
-    x = [s_ideal, s_ideal - 0.5 * s_ideal, s_ideal + 0.5 * s_ideal]
-    cdf_x = [0.5, 0.25, 0.75]
-
-    start = [1.0, 1.0]
-    sol = optimize(
-        theta -> objective(theta, x, cdf_x),
-        # Lower bound for the parameters.
-        [0.0, 0.0],
-        # Upper bound for the parameters.
-        [Inf, Inf],
-        start,
-    )
-
-    a, b = Optim.minimizer(sol)
-
-    return a, b
-end
-
 function draw_intervals(
     dims::Integer;
-    nif=20,
+    spread_min::Float64=0.0,
     spread_max::Float64=Inf,
-    params_spread::Tuple{Float64,Float64}=my_params_spread(dims, nif),
+    params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
     rate_coverage_min::Float64=0.8,
     n_samples::Int=Parameters.n(dims),
     remove_final_fully_overlapped::Bool=true,
     x_min::Float64=Intervals.X_MIN,
     x_max::Float64=Intervals.X_MAX,
-    spread_min::Float64=(x_max - x_min) / nif / 2,
     usemmap::Bool=false,
     n_intervals_max::Union{Int,Nothing}=nothing,
     return_coverage_rate::Bool=false,
@@ -360,7 +323,7 @@ function draw_intervals(
     return draw_intervals(
         Random.default_rng(),
         dims;
-        nif=nif,
+        spread_min=spread_min,
         spread_max=spread_max,
         params_spread=params_spread,
         rate_coverage_min=rate_coverage_min,
@@ -368,7 +331,6 @@ function draw_intervals(
         remove_final_fully_overlapped=remove_final_fully_overlapped,
         x_min=x_min,
         x_max=x_max,
-        spread_min=spread_min,
         usemmap=usemmap,
         n_intervals_max=n_intervals_max,
         return_coverage_rate=return_coverage_rate,
@@ -387,8 +349,6 @@ Generate random intervals for `dim` dimensions.
 # Arguments
 - `rng::AbstractRNG`:
 - `dims::Int`:
-- `nif`: Stands for `Number of Intervals in my Fantasy`. Reminds me of Nifflers,
-  which are cute.
 - `spread_min::Float64`:
 - `spread_max::Float64`:
 - `params_spread::Tuple{Float64, Float64}`: a and b parameters for the beta distribution.
@@ -401,15 +361,14 @@ Generate random intervals for `dim` dimensions.
 function draw_intervals(
     rng::AbstractRNG,
     dims::Int;
-    nif::Int=20,
+    spread_min::Float64=0.0,
     spread_max::Float64=Inf,
-    params_spread::Tuple{Float64,Float64}=my_params_spread(dims, nif),
+    params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
     rate_coverage_min::Float64=0.8,
     n_samples::Int=Parameters.n(dims),
     remove_final_fully_overlapped::Bool=true,
     x_min::Float64=Intervals.X_MIN,
     x_max::Float64=Intervals.X_MAX,
-    spread_min::Float64=(x_max - x_min) / nif / 2,
     usemmap::Bool=false,
     n_intervals_max::Union{Int,Nothing}=nothing,
     return_coverage_rate::Bool=false,
@@ -450,8 +409,8 @@ function draw_intervals(
 
         interval = draw_interval(
             rng,
-            x,
-            Intervals.spread_ideal_cubes(dims, nif; factor=0.1);
+            x;
+            spread_min=spread_min,
             spread_max=spread_max,
             params_spread=params_spread,
             x_min=x_min,

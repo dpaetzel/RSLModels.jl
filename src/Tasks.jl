@@ -38,14 +38,14 @@ end
 
 function generate(
     dims::Integer,
-    nif::Integer,
     n_train::Integer;
     n_test=10 * n_train,
     seed::Union{Nothing,Integer}=nothing,
     # Note that these are the same default values as the ones given for
     # `Intervals.draw_intervals`.
-    spread_min=Intervals.spread_ideal_cubes(dims, nif),
+    spread_min=0.0,
     spread_max=Inf,
+    params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
     rate_coverage_min::Float64=0.8,
     remove_final_fully_overlapped::Bool=true,
     x_min=X_MIN,
@@ -58,10 +58,10 @@ function generate(
 
     model = draw_model(
         rng,
-        dims,
-        nif;
+        dims;
         spread_min=spread_min,
         spread_max=spread_max,
+        params_spread=params_spread,
         rate_coverage_min=rate_coverage_min,
         remove_final_fully_overlapped=remove_final_fully_overlapped,
         x_min=x_min,
@@ -71,12 +71,12 @@ function generate(
     git_dirty = LibGit2.isdirty(GitRepo("."))
     hash_inputs = hash((
         dims,
-        nif,
         n_train,
         n_test,
         seed,
         spread_min,
         spread_max,
+        params_spread,
         rate_coverage_min,
         remove_final_fully_overlapped,
         x_min,

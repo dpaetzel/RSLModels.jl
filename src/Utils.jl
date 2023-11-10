@@ -102,9 +102,9 @@ function readstats(;
 
     df[!, "fname"] .= fnames
 
+    # TODO Use MLJ scientific types and coerce here
     df[!, "params.d"] .= Int.(df[:, "params.d"])
     df[!, "params.N"] .= Int.(df[:, "params.N"])
-    df[!, "params.nif"] .= Int.(df[:, "params.nif"])
     df[!, "params.seed"] .= Int.(df[:, "params.seed"])
     return df
 end

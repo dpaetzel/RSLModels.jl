@@ -89,7 +89,12 @@ function selectparams(fname; fname_sel=fname_sel_default(fname))
 
     # The following is for the smallest `rate_coverage_min` only.
     plt_hist =
-        data(df_sel[df_sel.rate_coverage_min .== first(sort(df.rate_coverage_min)), :]) *
+        data(
+            df_sel[
+                df_sel.rate_coverage_min .== first(sort(df.rate_coverage_min)),
+                :,
+            ],
+        ) *
         mapping(; col=:DX => nonnumeric, row=:K => nonnumeric) *
         histogram(; bins=20)
     draw(plt_hist * mapping(:a); facet=(; linkyaxes=:none)) |> display
@@ -136,6 +141,13 @@ function selectparams(fname; fname_sel=fname_sel_default(fname))
         ),
     ) |> display
     println()
+
+    df_sel_mean = rename(
+        df_sel_mean,
+        :a_mean => :a,
+        :b_mean => :b,
+        :spread_min_mean => :spread_min,
+    )
 
     CSV.write(fname_sel, df_sel_mean)
 
