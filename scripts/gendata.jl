@@ -142,11 +142,12 @@ Generate All The Tasks per seed in the given range.
 
     println("Reading parameter selection from $fname …")
     df = DataFrame(CSV.File(fname))
-    n_iter = nrows(df)
 
     # Add seeds.
     df[!, :seed] = repeat([startseed:endseed], nrows(df))
     df = flatten(df, :seed)
+
+    n_iter = nrows(df)
 
     # TODO Deduplicate by using Utils.onall here
     # Pattern from
