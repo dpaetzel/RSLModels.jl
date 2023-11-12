@@ -5,7 +5,6 @@ using Distributions
 using LinearAlgebra
 using Memoize
 using Mmap
-using Optim
 using Random
 using StatsBase
 

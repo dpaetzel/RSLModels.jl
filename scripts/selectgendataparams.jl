@@ -6,7 +6,7 @@ using DataFrames
 using Distributions
 using KittyTerminalImages
 using LaTeXStrings
-using MLJScientificTypes
+using ScientificTypes
 using Statistics
 using Tables
 
