@@ -46,6 +46,8 @@ end
 """
 Computes the mean of the subsethood degrees of the two intervals with respect to
 each other.
+
+Values are in [0, 1] with 1 being achieved if the intervals are the same.
 """
 function subsethood_mean(interval1::Interval, interval2::Interval)
     ssh1 = subsethood(interval1, interval2)
@@ -112,6 +114,9 @@ end
 """
 Given input data `X`, build a traversal count–based similarity function for
 intervals; mitigate punishing large intervals by taking the `DX`th root.
+
+Larger values means “more similar”, the highest possible values is 0 (i.e. this
+is a negated dissimilarity measure).
 """
 function simf_traversal_count_root(X::AbstractMatrix{Float64})
     function simf(i1, i2)
@@ -188,6 +193,12 @@ function mappings(
     return dict1to2, dict2to1
 end
 
+"""
+Compute for the two sets of intervals the two measures (one starting from the
+first set and one starting from the second set).
+"""
+function similarities end
+
 function similarities(
     intervals1::AbstractVector{Interval},
     intervals2::AbstractVector{Interval};
@@ -202,16 +213,23 @@ function similarities(sims_pairwise)
     return sum(sims_pairwise[idx1to2]), sum(sims_pairwise[idx2to1])
 end
 
+"""
+Compute the mean sum of minimum similarities using the given similarity measure.
+I.e. take the mean of the two values returned by `similarities` (i.e. mean of
+the two measures in the two directions).
+"""
+function similarity end
+
 function similarity(
     intervals1::AbstractVector{Interval},
     intervals2::AbstractVector{Interval};
     simf::Function=subsethood_mean,
 )
-    return sum(similarities(intervals1, intervals2; simf=simf))
+    return sum(similarities(intervals1, intervals2; simf=simf)) / 2
 end
 
 function similarity(sims_pairwise)
-    return sum(similarities(sims_pairwise))
+    return sum(similarities(sims_pairwise)) / 2
 end
 
 function similarity_max(
