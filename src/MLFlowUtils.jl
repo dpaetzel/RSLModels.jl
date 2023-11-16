@@ -19,16 +19,23 @@ export add_missing_keys!,
 function killsubprocs(proc)
     # First, record PID of the process and its child processes.
     pid = getpid(proc)
-    # https://superuser.com/questions/363169/#comment999457_363179
-    pids = read(
-        pipeline(
-            `pstree -pn $pid`,
-            `grep -o "([[:digit:]]*)"`,
-            `grep -o "[[:digit:]]*"`,
-        ),
-        String,
-    )
-    pids = parse.(Int, split(chomp(pids), "\n"))
+    pids = []
+    try
+        # https://superuser.com/questions/363169/#comment999457_363179
+        pids = read(
+            pipeline(
+                `pstree -pn $pid`,
+                `grep -o "([[:digit:]]*)"`,
+                `grep -o "[[:digit:]]*"`,
+            ),
+            String,
+        )
+        pids = parse.(Int, split(chomp(pids), "\n"))
+        # TODO Specify exception; this should actually only catch if grep exits with
+        # exit code 1 because then there are no child processes any more
+    catch e
+        pids = []
+    end
 
     # Try to end the process and its child processes nicely.
     kill(proc)
