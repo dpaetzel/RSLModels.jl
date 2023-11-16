@@ -6,7 +6,6 @@ using DataFrames
 using Dates
 using KittyTerminalImages
 using LaTeXStrings
-using ProgressBars
 using Random
 using Serialization
 using Statistics
@@ -174,11 +173,23 @@ display(
 )
 println()
 
+display(
+    draw(
+        data(df_sel) *
+        mapping(
+            :K,
+            :count_selected;
+            row=:coverage_bin => nonnumeric,
+            col=:DX => nonnumeric,
+        ) *
+        visual(ScatterLines),
+    ),
+)
+println()
+
 df_sel[!, :fnames] = getproperty.(df_sel.selected, "fname")
 
 function write_fishscript(df_sel)
-    length_df_sel = nrow(df_sel)
-
     fnames_selected = reduce(vcat, df_sel.fnames)
     # We replace colons with dashes so scp'ing is easier.
     thetime = replace(string(now()), ":" => "-")
@@ -194,7 +205,7 @@ function write_fishscript(df_sel)
         return write(
             f,
             "echo\n",
-            "echo There should be $length_df_sel tasks and there are (math (ls $folder_sel | wc -l) / 3).\n",
+            "echo There should be $(length(fnames_selected)) tasks and there are (math (ls $folder_sel | wc -l) / 3).\n",
         )
     end
 
