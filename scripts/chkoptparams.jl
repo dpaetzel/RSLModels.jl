@@ -19,7 +19,7 @@ using RSLModels.Utils
 # TODO Make this a proper script with a CLI arg
 df = load_runs(
     "optparams",
-    "results/2023-10-25T17:19:22.233990-optparams-no-suprb/mlruns",
+    "results/2023-11-10T19:41:30.234918-evostar-optparams/mlruns",
 )
 check(df)
 
