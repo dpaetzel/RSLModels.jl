@@ -119,6 +119,21 @@ function elemof(
     return out
 end
 
+"""
+In-place version of `elemof`, useful if the output has to be pre-allocated.
+"""
+function elemof!(
+    out::Vector{Bool},
+    X::AbstractMatrix{Float64},
+    interval::Interval,
+)
+    N = size(X, 1)
+    for n in 1:N
+        out[n] = elemof(view(X, n, :), interval)
+    end
+    return nothing
+end
+
 function volume(nothing)
     return 0.0
 end
@@ -379,11 +394,17 @@ function draw_intervals(
         for i in eachindex(X)
             X[i] = rand(rng) * (x_max - x_min)
         end
+
+        (path_m, io_m) = mktemp(tempdir())
+        m = mmap(io_m, Vector{Bool}, n_samples)
     else
         X = rand(rng, n_samples, dims) .* (x_max - x_min)
+        m = Vector{Bool}(undef, n_samples)
     end
 
-    # TODO Use mmap for M as well? But then I have to preallocate or grow?
+    # Note that `M` this is a vector of a few hundred vectors at most and we
+    # thus do not preallocate this (which would be slightly awkward due to the
+    # dynamic nature of `M`).
     M = Vector{Bool}[]
     matched = fill(false, n_samples)
     intervals::AbstractVector{Interval} = []
@@ -416,7 +437,7 @@ function draw_intervals(
             x_max=x_max,
         )
 
-        m = elemof(X, interval; usemmap=usemmap)
+        elemof!(m, X, interval)
 
         # If the just-created interval is fully covered by the other intervals
         # (at least as measured by looking at `X`), then do retry.
@@ -446,8 +467,12 @@ function draw_intervals(
 
     # Not 100% sure whether this reassignment is necessary.
     X = 0.0
+    m = 0.0
     if usemmap
         close(io_X)
+        rm(path_X)
+        close(io_m)
+        rm(path_m)
     end
 
     if return_coverage_rate
