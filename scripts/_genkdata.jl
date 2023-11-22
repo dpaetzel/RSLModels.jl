@@ -31,7 +31,7 @@ function mysample1(;
         rates_coverage[i], intervals = draw_intervals(
             DX;
             rate_coverage_min=rate_coverage_min,
-            params_spread=(a, b),
+            params_spread=(a=a, b=b),
             spread_min=spread_min,
             usemmap=usemmap,
             n_intervals_max=50,
