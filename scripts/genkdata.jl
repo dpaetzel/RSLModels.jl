@@ -24,10 +24,13 @@ process.
 
 - `--n-samples`: Number of samples to draw each time (to later be able to
   estimate distribution statistics such as mean).
+- `--usemmap`: Whether to memory-map large arrays (X, y, matching matrices, …)
+  to disk and save RAM that way.
 """
 @main function mysample(
     n_iter::Int;
     n_samples::Int=21,
+    usemmap::Bool=false,
     DXs=DXs,
     rates_coverage_min=rates_coverage_min,
 )
@@ -82,7 +85,7 @@ process.
                     n_samples=n_samples,
                     DXs=DXs,
                     rates_coverage_min=rates_coverage_min,
-                    # usemmap=true,
+                    usemmap=usemmap,
                 )
 
                 # Trigger process bar update and result fetching.
