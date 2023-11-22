@@ -58,6 +58,7 @@ process.
     fname_part = "$dtime-$idrand-kdata.csv.part"
     fname = "$dtime-$idrand-kdata.csv"
     fhandle = open(fname_part, "a")
+    println("Opened $fname_part for writing …")
 
     @sync begin
         # The first task updates the progress bar and collects the results.
@@ -114,6 +115,7 @@ process.
     close(fhandle)
     try
         mv(fname_part, fname)
+        println("Successfully moved $fname_part to $fname.")
     catch e
         if isa(e, ArgumentError)
             println(e)
