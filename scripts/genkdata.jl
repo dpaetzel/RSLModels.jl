@@ -7,8 +7,8 @@ using ProgressMeter
 using RSLModels.Intervals
 using RSLModels.Utils
 
-DXs = [2, 3, 5, 8, 10, 13]
-rates_coverage_min = [0.75, 0.9]
+DXs_default::Vector{Int} = [2, 3, 5, 8, 10, 13]
+rates_coverage_min::Vector{Float64} = [0.75, 0.9]
 
 """
 Sample the condition set–drawing process many times and write statistics (most
@@ -18,22 +18,28 @@ process.
 
 # Args
 
-- `n_iter`: Number of times to sample.
+- `DXs`: Input space dimensions to sample for.
 
 # Options
 
+- `--n-iter`: Number of times to sample.
 - `--n-samples`: Number of samples to draw each time (to later be able to
   estimate distribution statistics such as mean).
 - `--usemmap`: Whether to memory-map large arrays (X, y, matching matrices, …)
   to disk and save RAM that way.
 """
 @main function mysample(
-    n_iter::Int;
+    DXs::Int...;
+    n_iter::Int=100,
     n_samples::Int=21,
     usemmap::Bool=false,
-    DXs=DXs,
     rates_coverage_min=rates_coverage_min,
 )
+    if isempty(DXs)
+        println("No DXs given, using default $DXs_default …")
+        DXs = DXs_default
+    end
+
     @everywhere include((@__DIR__) * "/_genkdata.jl")
 
     # Pattern from
