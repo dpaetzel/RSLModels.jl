@@ -49,9 +49,15 @@ process.
     channel = RemoteChannel(() -> Channel{Bool}())
     channel_out = RemoteChannel(() -> Channel{Tuple{Int64,Any}}())
 
-    # Open a file in append mode.
-    dtime = Dates.format(now(), "yyyy-mm-dd-HH-MM-SS")
-    fhandle = open("$dtime-kdata.csv", "a")
+    # Open a file in append mode, include a short random ID to keep the file
+    # name readable while decreasing the possibility of collisions in the
+    # filename (Julia 1.9.3 does not support a `prefix` parameter for `mktemp`
+    # but only for `mktempdir` and I want a .csv file during running already).
+    dtime = Dates.format(now(), "yyyy-mm-dd-HH-MM-SS-sss")
+    idrand = join(rand(vec(['a':'z'; 'A':'Z'; '0':'9']), 4))
+    fname_part = "$dtime-$idrand-kdata.csv.part"
+    fname = "$dtime-$idrand-kdata.csv"
+    fhandle = open(fname_part, "a")
 
     @sync begin
         # The first task updates the progress bar and collects the results.
@@ -106,6 +112,18 @@ process.
     end
 
     close(fhandle)
+    try
+        mv(fname_part, fname)
+    catch e
+        if isa(e, ArgumentError)
+            println(e)
+            println(
+                "Consider to simply rename the .part file to a not-yet-used name.",
+            )
+        else
+            rethrow(e)
+        end
+    end
 
     return nothing
 end
