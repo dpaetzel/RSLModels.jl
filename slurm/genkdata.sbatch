@@ -6,4 +6,4 @@
 #SBATCH --time=4-0:0:0
 #SBATCH --output=output/%A-%a.txt
 
-srun nix develop . --impure --command julia -p $SLURM_CPUS_PER_TASK  --project=. scripts/genkdata.jl 10000
+srun nix develop . --impure --command julia -p $SLURM_CPUS_PER_TASK  --project=. scripts/genkdata.jl --n-iter=10000
