@@ -469,6 +469,7 @@ function draw_intervals(
     X = 0.0
     m = 0.0
     if usemmap
+        # TODO Consider to use a finalizer here to be sure
         close(io_X)
         rm(path_X)
         close(io_m)
