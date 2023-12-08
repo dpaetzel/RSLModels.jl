@@ -564,11 +564,36 @@ function intersection(interval1::Interval, interval2::Interval)
     l = max.(interval1.lbound, interval2.lbound)
     u = min.(interval1.ubound, interval2.ubound)
 
+    # The new interval has an open lower bound if that lower bound was open in
+    # the original interval as well.
+    lopen =
+        ((l .== interval1.lbound) .&& interval1.lopen) .||
+        ((l .== interval2.lbound) .&& interval2.lopen)
+    uopen =
+        ((u .== interval1.ubound) .&& interval1.uopen) .||
+        ((u .== interval2.ubound) .&& interval2.uopen)
+
     if any(u .< l)
         return nothing
     else
-        return Interval(l, u)
+        interval = Interval(l, u; lopen=lopen, uopen=uopen)
+        if isempty(interval)
+            return nothing
+        else
+            return interval
+        end
     end
+end
+
+function isempty(nothing)
+    return true
+end
+
+function isempty(interval::Interval)
+    return any(
+        (interval.lbound .== interval.ubound) .&&
+        (interval.lopen .|| interval.uopen),
+    )
 end
 
 """
