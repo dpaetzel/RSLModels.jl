@@ -15,6 +15,7 @@ include("Models.jl")
 include("Plots.jl")
 include("Scores.jl")
 include("Tasks.jl")
+include("Transformers.jl")
 include("Utils.jl")
 
 end
