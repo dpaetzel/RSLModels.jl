@@ -14,7 +14,8 @@ export add_missing_keys!,
     load_runs,
     run_to_dict,
     runtimes,
-    tryread
+    tryread,
+    runs_to_df
 
 function killsubprocs(proc)
     # First, record PID of the process and its child processes.
@@ -69,6 +70,17 @@ function run_to_dict(r)
     infodict = Dict(string(key) => val for (key, val) in infodict)
     # Note that we ignore tags for now.
     return rundict = merge(infodict, paramsdict, metricsdict)
+end
+
+"""
+    runs_to_df(runs::Vector{MLFlowRun})
+
+Transforms the vector into a `DataFrame`.
+"""
+function runs_to_df(runs::Vector{MLFlowRun})
+    dicts = run_to_dict.(runs)
+    add_missing_keys!(dicts)
+    return df = DataFrame(dicts)
 end
 
 function has_bounds(label_algorithm)
@@ -173,9 +185,7 @@ function load_runs(exp_name; url="http://localhost:5000")
     runs = searchruns(mlf, expid; max_results=10000)
     println("Finished loading runs for experiment $expid from $url.")
 
-    dicts = run_to_dict.(runs)
-    add_missing_keys!(dicts)
-    df = DataFrame(dicts)
+    df = runs_to_df(runs)
     df[!, "params.data.DX"] .= parse.(Int, df[:, "params.data.DX"])
     df[!, "params.data.hash"] .= parse.(UInt, df[:, "params.data.hash"])
 
