@@ -7,8 +7,14 @@ using Mmap
 using Random
 using StatsBase
 
-export ConstantModel,
-    draw_constantmodel, mixing, mix, output, output_mean, output_variance
+using ..AbstractModels
+
+export ConstantModel, draw_constantmodel
+
+str_independent = """
+Note that, for constant models, the output distribution is independent from
+inputs (i.e. only the number of inputs matters for this function).
+"""
 
 @auto_hash_equals struct ConstantModel
     coef::Real
@@ -66,30 +72,42 @@ function draw_constantmodel(rng::AbstractRNG; isdefault::Bool=false)
     )
 end
 
-# The output at a certain point is independent of the input because of the model
-# being constant.
-function output(model::ConstantModel)
-    return output(Random.default_rng(), model)
+"""
+    output([rng::AbstractRNG], model::ConstantModel)
+
+Since constant models' outputs are independent of inputs `X`, we can define an
+`X`-less form.
+"""
+function AbstractModels.output(model::ConstantModel)
+    return AbstractModels.output(Random.default_rng(), model)
 end
 
-function output(rng::AbstractRNG, model::ConstantModel)
+function AbstractModels.output(rng::AbstractRNG, model::ConstantModel)
     # Note that outputs of constant models do not depend on inputs.
     return model.coef + rand(rng, model.dist_noise)
 end
 
-# Predicting with a constant model for several inputs does not depend on the
-# inputs themselves but only on the number of them. We nevertheless provide `X`
-# fully here for abstraction reasons (e.g. if we add another kind of local model
-# that actually does depend on the inputs).
-function output(
+"""
+    output([rng::AbstractRNG], model::ConstantModel, X::AbstractMatrix{Float64}; usemmap=false)
+
+Given inputs `X`, sample for each the respective output distribution.
+
+$str_independent
+"""
+function AbstractModels.output(
     model::ConstantModel,
     X::AbstractMatrix{Float64};
     usemmap=false,
 )
-    return output(Random.default_rng(), model, X; usemmap=usemmap)
+    return AbstractModels.output(
+        Random.default_rng(),
+        model,
+        X;
+        usemmap=usemmap,
+    )
 end
 
-function output(
+function AbstractModels.output(
     rng::AbstractRNG,
     model::ConstantModel,
     X::AbstractMatrix{Float64};
@@ -100,156 +118,57 @@ function output(
         (path_y, io_y) = mktemp(tempdir())
         y = mmap(io_y, Vector{Float64}, N)
         for i in 1:N
-            y[i] = output(rng, model)
+            y[i] = AbstractModels.output(rng, model)
         end
         return y
     else
-        return [output(rng, model) for _ in 1:N]
+        return [AbstractModels.output(rng, model) for _ in 1:N]
     end
 end
 
-function output(
-    models::AbstractVector{ConstantModel},
+# TODO Implement usemmap for output_mean?
+# TODO Implement usemmap for output_variance?
+"""
+    output_mean(model::ConstantModel, X::AbstractMatrix{Float64})
+
+Given inputs `X`, return the output distribution's mean for each.
+
+$str_independent
+"""
+function AbstractModels.output_mean(
+    model::ConstantModel,
     X::AbstractMatrix{Float64},
-    matching_matrix::AbstractMatrix{Bool};
-    usemmap=false,
 )
-    return output(
-        Random.default_rng(),
-        models,
-        X,
-        matching_matrix;
-        usemmap=usemmap,
-    )
-end
-
-function output(
-    rng::AbstractRNG,
-    models::AbstractVector{ConstantModel},
-    X::AbstractMatrix{Float64},
-    matching_matrix::AbstractMatrix{Bool};
-    usemmap=false,
-)
-    N = size(X, 1)
-    K = length(models)
-
-    if usemmap
-        # Note that this duplicates code somewhat from `mixing` (see below).
-        (path_y, io_y) = mktemp(tempdir())
-        y = mmap(io_y, Vector{Float64}, N)
-        outs = Vector{Float64}(undef, K)
-        mixs = Vector{Float64}(undef, K)
-        for n in 1:N
-            for k in 1:K
-                # This would be more general but constant local models don't
-                # care about x.
-                # outs[k] = output(rng, models[k], X[n])
-                outs[k] = output(rng, models[k])
-                mixs[k] = models[k].coef_mix * matching_matrix[n, k]
-            end
-            # Mixing coefficients are allowed to be `Inf` but these cases need
-            # to be handled properly. If at least one of the mixing coefficients
-            # is `Inf`, we set all non-`Inf` mixing coefficients to 0.0 and all
-            # `Inf`s to 1.0. This yields equal mixing between the rules with
-            # `Inf`s.
-            if any(isinf.(mixs))
-                mixs[(!).(isinf.(mixs))] .= 0.0
-                mixs[isinf.(mixs)] .= 1.0
-            end
-            y[n] = sum(outs .* (mixs ./ sum(mixs)))
-        end
-        return y
-    else
-        outs = hcat(map(model -> output(rng, model, X), models)...)
-        return mix(models, outs, matching_matrix)
-    end
-end
-
-function output_mean(model::ConstantModel, X::AbstractMatrix{Float64})
     return repeat([model.coef], size(X, 1))
 end
 
-function output_mean(
+"""
+    output_mean(models::AbstractVector{ConstantModel}, X::AbstractMatrix{Float64})
+
+Given inputs `X`, return for each model its the output distribution mean for
+each input.
+
+$str_independent
+"""
+function AbstractModels.output_mean(
     models::AbstractVector{ConstantModel},
     X::AbstractMatrix{Float64},
 )
-    return hcat(map(model -> output_mean(model, X), models)...)
+    return hcat(map(model -> AbstractModels.output_mean(model, X), models)...)
 end
 
-function output_mean(
-    models::AbstractVector{ConstantModel},
+"""
+    output_variance(model::ConstantModel, X::AbstractMatrix{Float64})
+
+Given inputs `X`, return the output distribution's variance for each.
+
+$str_independent
+"""
+function AbstractModels.output_variance(
+    model::ConstantModel,
     X::AbstractMatrix{Float64},
-    matching_matrix::AbstractMatrix{Bool},
 )
-    # TODO Consider to abstract from `output_mean` vs `output` (only difference
-    # to `output`)
-    outs = output_mean(models, X)
-    return mix(models, outs, matching_matrix)
-end
-
-function output_variance(model::ConstantModel, X::AbstractMatrix{Float64})
     return repeat([model.dist_noise.σ], size(X, 1))
-end
-
-function output_variance(
-    models::AbstractVector{ConstantModel},
-    X::AbstractMatrix{Float64},
-    matching_matrix::AbstractMatrix{Bool},
-)
-    vars = [m.dist_noise.σ for m in models]
-    mix = mixing(models, matching_matrix)
-    return vec(sum(vars' .* mix .^ 2; dims=2))
-end
-
-"""
-Check the matching matrix for all data points being matched by at least one
-rule.
-"""
-function check_matching_matrix(matching_matrix::AbstractMatrix{Bool})
-    # Check whether any row is all zeroes.
-    if any(sum(matching_matrix; dims=2) .== 0)
-        println(matching_matrix)
-        error("some samples are unmatched, add a default rule")
-    end
-end
-
-"""
-Compute a mixing weight for each local model for each data point.
-"""
-function mixing(
-    models::AbstractVector{ConstantModel},
-    matching_matrix::AbstractMatrix{Bool},
-)
-    check_matching_matrix(matching_matrix)
-
-    coefs_mix = [model.coef_mix for model in models]
-    coefs_mix = coefs_mix' .* matching_matrix
-
-    # Mixing coefficients are allowed to be `Inf` but these cases need to be
-    # handled properly. If at least one of the mixing coefficients is `Inf`, we
-    # set all non-`Inf` mixing coefficients to 0.0 and all `Inf`s to 1.0. This
-    # yields equal mixing between the rules with `Inf`s.
-    for row in eachrow(coefs_mix)
-        if any(isinf.(row))
-            row[(!).(isinf.(row))] .= 0.0
-            row[isinf.(row)] .= 1.0
-        end
-    end
-
-    return coefs_mix ./ sum(coefs_mix; dims=2)
-end
-
-function mix(
-    models::AbstractVector{ConstantModel},
-    outputs::AbstractMatrix{Float64},
-    matching_matrix::AbstractMatrix{Bool},
-)
-
-    # The first dimension of the matching matrix (and therefore of the
-    # data structure that this results in) is the dimension of the number of
-    # input data points. The second dimension are the models, therefore sum over
-    # the second dimension.
-    return vec(sum(outputs .* mixing(models, matching_matrix); dims=2))
 end
 
 end

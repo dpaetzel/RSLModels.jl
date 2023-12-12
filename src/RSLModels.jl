@@ -6,6 +6,7 @@ using PyPlot
 using Random
 using StatsBase
 
+include("AbstractModels.jl")
 include("Parameters.jl")
 
 include("Intervals.jl")
