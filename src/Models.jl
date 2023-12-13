@@ -146,7 +146,7 @@ function draw_data(rng::AbstractRNG, model::Model, n; usemmap=false)
         usemmap=usemmap,
     )
     matching_matrix = match(model, X; usemmap=usemmap)
-    y = output(rng, model.local_models, X, matching_matrix; usemmap=usemmap)
+    y = output(rng, model, X, matching_matrix; usemmap=usemmap)
 
     return X, y, matching_matrix
 end
