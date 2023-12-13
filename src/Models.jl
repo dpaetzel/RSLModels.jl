@@ -245,7 +245,7 @@ function AbstractModels.output_variance(
     X::AbstractMatrix{Float64};
     matching_matrix::AbstractMatrix{Bool}=match(model, X),
 )
-    vars = [m.dist_noise.σ for m in model.local_models]
+    vars = [m.dist_out.σ for m in model.local_models]
     mix = mixing(model.local_models, matching_matrix)
     return vec(sum(vars' .* mix .^ 2; dims=2))
 end

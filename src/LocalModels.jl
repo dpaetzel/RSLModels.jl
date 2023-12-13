@@ -17,7 +17,9 @@ inputs (i.e. only the number of inputs matters for this function).
 """
 
 @auto_hash_equals struct ConstantModel
+    "Output distribution."
     dist_out::Distribution
+    "Mixing coefficient."
     coef_mix::Real
     # Whether this is a default rule (and should thus not undergo mixing
     # coefficient fixing).
@@ -165,7 +167,7 @@ function AbstractModels.output_variance(
     model::ConstantModel,
     X::AbstractMatrix{Float64},
 )
-    return repeat([model.dist_noise.σ], size(X, 1))
+    return repeat([model.dist_out.σ], size(X, 1))
 end
 
 end
