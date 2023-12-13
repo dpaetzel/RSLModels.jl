@@ -160,8 +160,11 @@ function runga(config::GARegressor, X, y)
                 DX;
                 spread_min=config.spread_min,
                 # TODO Extract remaining parameters to config
-                spread_max=Inf,
-                params_spread=(a=1.0, b=1.0),
+                spread_max=config.spread_max,
+                params_spread=(
+                    a=config.params_spread_a,
+                    b=config.params_spread_b,
+                ),
                 rate_coverage_min=0.8,
                 remove_final_fully_overlapped=true,
                 # TODO Consider to reduce this number for faster initialization
@@ -192,8 +195,8 @@ function runga(config::GARegressor, X, y)
                 x1, x2 = (deepcopy(pop[idx1]), deepcopy(pop[idx2]))
             end
 
-            x1 = mutate(rng, x1)
-            x2 = mutate(rng, x2)
+            x1 = mutate(rng, x1, X, config)
+            x2 = mutate(rng, x2, X, config)
 
             x1 = repair(rng, x1)
             x2 = repair(rng, x2)
@@ -225,19 +228,73 @@ function crossover(rng, x1, x2)
     return deepcopy(x1), deepcopy(x2)
 end
 
-function mutate(rng, x)
-    @warn "`mutate` not implemented yet"
+"""
+This is the mutation operator used by (Ryerkerk et al., 2020).
+
+It mutates, on average, one of the metavariables (i.e. conditions) fully but
+allows those mutations to be spread over several metavariables.
+"""
+function mutate end
+
+function mutate(rng, x::EvaluatedGenotype, X, config)
+    return mutate(rng, x.genotype, X, config)
+end
+
+function mutate(rng, x::Genotype, X, config)
+    N, DX = size(X)
+
     x_ = deepcopy(x)
 
-    # Change a design variable.
-    # if rand(rng) <
+    # Number of metavariables.
+    l = length(x_)
 
+    # We have `2 * DX` design variables per metavariable (each condition is one
+    # metavariable).
+    n_dvars = 2 * DX
+
+    # TODO Look at efficiency of this combination of loops and rand
+
+    # Go over all metavariables (i.e. all conditions).
+    for idx in eachindex(x_)
+        for idx_lower in eachindex(x_[idx].lbound)
+            if rand(rng) < 1.0 / (n_dvars * l)
+                val = x_[idx].lbound[idx_lower]
+                x_[idx].lbound[idx_lower] =
+                # TODO Expose rate_mu parameter
+                # TODO Check whether used std is sensible here
+                    rand(Normal(val, 0.05 * (config.x_max - config.x_min)))
+            end
+        end
+    end
+
+    # TODO Expose p_mu_add
     # Add a metavariable.
-    # if rand(rng) < 0.05
-    # end
+    if rand(rng) < 0.05
+        # TODO Consider to enforce matching a configurable number of data points
+        # Draw a random data point.
+        idx = rand(rng, 1:N)
+        x = X[idx, :]
+
+        condition = draw_interval(
+            rng,
+            x;
+            spread_min=config.spread_min,
+            spread_max=config.spread_max,
+            params_spread=(a=config.params_spread_a, b=config.params_spread_b),
+            x_min=config.x_min,
+            x_max=config.x_max,
+        )
+
+        push!(x_, condition)
+    end
+
+    # TODO Expose p_mu_rm
     # Remove a metavariable.
-    # if rand(rng) < 0.05
-    # end
+    if rand(rng) < 0.05
+        idx = rand(rng, eachindex(x_))
+        deleteat!(x_, idx)
+    end
+
     return x_
 end
 

@@ -67,6 +67,27 @@ function MMI.clean!(m::GARegressor)
         m.spread_min = params_default[:spread_min]
     end
 
+    if !(0 <= m.spread_max)
+        warning *=
+            "Parameter `spread_max` expected to be in [0, Inf), " *
+            "resetting to $(params_default[:spread_max])"
+        m.spread_max = params_default[:spread_max]
+    end
+
+    if !(0 < m.params_spread_a)
+        warning *=
+            "Parameter `params_spread_a` expected to be in (0, Inf), " *
+            "resetting to $(params_default[:params_spread_a])"
+        m.params_spread_a = params_default[:params_spread_a]
+    end
+
+    if !(0 < m.params_spread_b)
+        warning *=
+            "Parameter `params_spread_b` expected to be in (0, Inf), " *
+            "resetting to $(params_default[:params_spread_b])"
+        m.params_spread_b = params_default[:params_spread_b]
+    end
+
     return warning
 end
 

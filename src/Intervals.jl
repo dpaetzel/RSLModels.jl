@@ -420,6 +420,8 @@ function draw_intervals(
             )
         end
 
+        # TODO Consider to enforce matching a configurable number of data points
+
         idx = rand(rng, 1:n_samples)
         # Note that this may use the same `x` for multiple intervals which is
         # probably not wanted. However, filtering for unmatched `x` is probably
