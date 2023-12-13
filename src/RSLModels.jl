@@ -19,4 +19,6 @@ include("Tasks.jl")
 include("Transformers.jl")
 include("Utils.jl")
 
+include("GARegressors/GARegressors.jl")
+
 end
