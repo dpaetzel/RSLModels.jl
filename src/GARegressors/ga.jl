@@ -191,13 +191,13 @@ function runga(config::GARegressor, X, y)
         for (idx1, idx2) in eachcol(idx_rand)
             if rand(rng) <= config.rate_crossover
                 # TODO Gotta copy in crossover if needed
-                x1, x2 = crossover(rng, pop[idx1], pop[idx2])
+                x1, x2, report = crossover(rng, pop[idx1], pop[idx2])
             else
                 x1, x2 = (deepcopy(pop[idx1]), deepcopy(pop[idx2]))
             end
 
-            x1 = mutate(rng, x1, X, config)
-            x2 = mutate(rng, x2, X, config)
+            x1, report = mutate(rng, x1, X, config)
+            x2, report = mutate(rng, x2, X, config)
 
             x1, report = repair(rng, x1, X)
             x2, report = repair(rng, x2, X)
@@ -215,7 +215,7 @@ function runga(config::GARegressor, X, y)
                 Ref(config.x_max),
                 Ref(ffunc),
             )
-        pop[:] = select(rng, pop, sols_new)
+        pop[:], report = select(rng, pop, sols_new)
     end
 
     idx_best = argmax(idx -> getproperty(pop[idx], :fitness), eachindex(pop))
@@ -226,7 +226,8 @@ end
 
 function crossover(rng, x1, x2)
     @warn "`crossover` not implemented yet"
-    return deepcopy(x1), deepcopy(x2)
+    report = (;)
+    return deepcopy(x1), deepcopy(x2), report
 end
 
 """
@@ -296,7 +297,8 @@ function mutate(rng, x::Genotype, X, config)
         deleteat!(x_, idx)
     end
 
-    return x_
+    report = (;)
+    return x_, report
 end
 
 """
@@ -347,5 +349,6 @@ function select(rng, pop, sols_new)
         push!(pop_new, winner)
     end
 
-    return pop_new
+    report = (;)
+    return pop_new, report
 end
