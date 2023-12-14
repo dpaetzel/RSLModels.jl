@@ -1,4 +1,7 @@
-Genotype = Vector{Intervals.Interval}
+Genotype = AbstractVector{Intervals.Interval}
+
+const XType::DataType = AbstractMatrix{Float64}
+const YType::DataType = AbstractVector{Float64}
 
 draw_genotype = draw_intervals
 
@@ -23,8 +26,8 @@ abstract type FitnessEvaluation end
 A mean absolute error–based fitness evaluation scheme.
 """
 struct MAEFitness <: FitnessEvaluation
-    X::AbstractMatrix
-    y::AbstractVector
+    X::XType
+    y::YType
 end
 
 """
@@ -33,7 +36,7 @@ scheme.
 """
 struct DissimFitness <: FitnessEvaluation
     model::Models.Model
-    X::AbstractMatrix
+    X::XType
 end
 
 # TODO Add CV-based fitness evaluation scheme
@@ -74,7 +77,7 @@ Express the given genotype, yielding a phenotype.
 This is achieved by fitting a rule set model for based on the set of conditions
 specified by the genotype.
 """
-function express(genotype::Genotype, X, y, x_min, x_max)
+function express(genotype::Genotype, X::XType, y::YType, x_min, x_max)
     # TODO Consider to cache matching
     N, DX = size(X)
 
@@ -118,13 +121,27 @@ Evaluate the given solution genotype using the given fitness function.
 """
 function evaluate end
 
-function evaluate(genotype::Genotype, X, y, x_min, x_max, ffunc)
+function evaluate(
+    genotype::Genotype,
+    X::XType,
+    y::YType,
+    x_min::Float64,
+    x_max::Float64,
+    ffunc::Function,
+)
     phenotype = express(genotype, X, y, x_min, x_max)
     fitness = ffunc(phenotype)
     return EvaluatedGenotype(genotype, phenotype, fitness)
 end
 
-function evaluate(solution::EvaluatedGenotype, X, y, x_min, x_max, ffunc)
+function evaluate(
+    solution::EvaluatedGenotype,
+    X::XType,
+    y::YType,
+    x_min::Float64,
+    x_max::Float64,
+    ffunc::Function,
+)
     phenotype = express(solution.genotype, X, y, x_min, x_max)
     fitness = ffunc(phenotype)
     return EvaluatedGenotype(solution.genotype, phenotype, fitness)
@@ -132,7 +149,7 @@ end
 
 struct GAResult
     best::EvaluatedGenotype
-    pop_rest::Vector{EvaluatedGenotype}
+    pop_rest::AbstractVector{EvaluatedGenotype}
 end
 
 """
@@ -140,7 +157,7 @@ end
 """
 function runga end
 
-function runga(config::GARegressor, X, y)
+function runga(config::GARegressor, X::XType, y::YType)
     # Note that this does not perform checks on the config but instead assumes
     # that it is valid.
 
@@ -191,19 +208,19 @@ function runga(config::GARegressor, X, y)
         for (idx1, idx2) in eachcol(idx_rand)
             if rand(rng) <= config.rate_crossover
                 # TODO Gotta copy in crossover if needed
-                x1, x2, report = crossover(rng, pop[idx1], pop[idx2])
+                g1, g2, report = crossover(rng, pop[idx1], pop[idx2])
             else
-                x1, x2 = (deepcopy(pop[idx1]), deepcopy(pop[idx2]))
+                g1, g2 = (deepcopy(pop[idx1]), deepcopy(pop[idx2]))
             end
 
-            x1, report = mutate(rng, x1, X, config)
-            x2, report = mutate(rng, x2, X, config)
+            g1, report = mutate(rng, g1, X, config)
+            g2, report = mutate(rng, g2, X, config)
 
-            x1, report = repair(rng, x1, X)
-            x2, report = repair(rng, x2, X)
+            g1, report = repair(rng, g1, X)
+            g2, report = repair(rng, g2, X)
 
-            push!(sols_new, x1)
-            push!(sols_new, x2)
+            push!(sols_new, g1)
+            push!(sols_new, g2)
         end
 
         sols_new =
@@ -224,10 +241,20 @@ function runga(config::GARegressor, X, y)
     return GAResult(best, pop)
 end
 
-function crossover(rng, x1, x2)
+function crossover end
+
+function crossover(
+    rng::AbstractRNG,
+    g1::EvaluatedGenotype,
+    g2::EvaluatedGenotype,
+)
+    return crossover(rng, g1.genotype, g2.genotype)
+end
+
+function crossover(rng::AbstractRNG, g1::Genotype, g2::Genotype)
     @warn "`crossover` not implemented yet"
     report = (;)
-    return deepcopy(x1), deepcopy(x2), report
+    return deepcopy(g1), deepcopy(g2), report
 end
 
 """
@@ -238,17 +265,17 @@ allows those mutations to be spread over several metavariables.
 """
 function mutate end
 
-function mutate(rng, x::EvaluatedGenotype, X, config)
-    return mutate(rng, x.genotype, X, config)
+function mutate(rng, g::EvaluatedGenotype, X::XType, config::GARegressor)
+    return mutate(rng, g.genotype, X, config)
 end
 
-function mutate(rng, x::Genotype, X, config)
+function mutate(rng, g::Genotype, X::XType, config::GARegressor)
     N, DX = size(X)
 
-    x_ = deepcopy(x)
+    g_ = deepcopy(g)
 
     # Number of metavariables.
-    l = length(x_)
+    l = length(g_)
 
     # We have `2 * DX` design variables per metavariable (each condition is one
     # metavariable).
@@ -257,11 +284,11 @@ function mutate(rng, x::Genotype, X, config)
     # TODO Look at efficiency of this combination of loops and rand
 
     # Go over all metavariables (i.e. all conditions).
-    for idx in eachindex(x_)
-        for idx_lower in eachindex(x_[idx].lbound)
+    for idx in eachindex(g_)
+        for idx_lower in eachindex(g_[idx].lbound)
             if rand(rng) < 1.0 / (n_dvars * l)
-                val = x_[idx].lbound[idx_lower]
-                x_[idx].lbound[idx_lower] =
+                val = g_[idx].lbound[idx_lower]
+                g_[idx].lbound[idx_lower] =
                 # TODO Expose rate_mu parameter
                 # TODO Check whether used std is sensible here
                     rand(Normal(val, 0.05 * (config.x_max - config.x_min)))
@@ -287,18 +314,18 @@ function mutate(rng, x::Genotype, X, config)
             x_max=config.x_max,
         )
 
-        push!(x_, condition)
+        push!(g_, condition)
     end
 
     # TODO Expose p_mu_rm
     # Remove a metavariable.
     if rand(rng) < 0.05
-        idx = rand(rng, eachindex(x_))
-        deleteat!(x_, idx)
+        idx = rand(rng, eachindex(g_))
+        deleteat!(g_, idx)
     end
 
     report = (;)
-    return x_, report
+    return g_, report
 end
 
 """
@@ -306,23 +333,23 @@ Ensure that each rule matches at least a certain number of training data points.
 """
 function repair end
 
-function repair(rng, x::EvaluatedGenotype, X)
-    return repair(rng, x.genotype, X)
+function repair(rng::AbstractRNG, g::EvaluatedGenotype, X::XType)
+    return repair(rng, g.genotype, X)
 end
 
-function repair(rng, x::Genotype, X)
-    x_ = deepcopy(x)
+function repair(rng::AbstractRNG, g::Genotype, X::XType)
+    g_ = deepcopy(g)
 
     # TODO Expose repair k parameter/derive meaningful value
     k = 2
 
     idx_rm = []
-    for idx in eachindex(x_)
-        if count(elemof(X, x_[idx])) < k
+    for idx in eachindex(g_)
+        if count(elemof(X, g_[idx])) < k
             push!(idx_rm, idx)
         end
     end
-    deleteat!(x_, idx_rm)
+    deleteat!(g_, idx_rm)
     n_removed = length(idx_rm)
     if n_removed > 0
         @info "Removed $n_removed conditions due to less than $k training " *
@@ -330,10 +357,14 @@ function repair(rng, x::Genotype, X)
     end
 
     report = (n_removed = n_removed)
-    return x_, report
+    return g_, report
 end
 
-function select(rng, pop, sols_new)
+function select(
+    rng::AbstractRNG,
+    pop::AbstractVector{EvaluatedGenotype},
+    sols_new::AbstractVector{EvaluatedGenotype},
+)
     @warn "`select` not implemented yet"
 
     # Simplistic tournament selection.
