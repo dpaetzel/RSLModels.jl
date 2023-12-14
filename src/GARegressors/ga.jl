@@ -85,6 +85,7 @@ function express(genotype::Genotype, X, y, x_min, x_max)
     for idx in eachindex(conditions)
         y_matched = view(y, elemof(X, conditions[idx]))
         # TODO Expose this parameter as match_min or something like that
+        # TODO Disable this test if `repair` is used
         # If too few training data points are matched, ignore the condition.
         if length(y_matched) < 2
             push!(idx_rm, idx)
@@ -198,8 +199,8 @@ function runga(config::GARegressor, X, y)
             x1 = mutate(rng, x1, X, config)
             x2 = mutate(rng, x2, X, config)
 
-            x1 = repair(rng, x1)
-            x2 = repair(rng, x2)
+            x1, report = repair(rng, x1, X)
+            x2, report = repair(rng, x2, X)
 
             push!(sols_new, x1)
             push!(sols_new, x2)
@@ -298,13 +299,36 @@ function mutate(rng, x::Genotype, X, config)
     return x_
 end
 
-function repair(rng, x)
-    @warn "`repair` not implemented yet"
+"""
+Ensure that each rule matches at least a certain number of training data points.
+"""
+function repair end
+
+function repair(rng, x::EvaluatedGenotype, X)
+    return repair(rng, x.genotype, X)
+end
+
+function repair(rng, x::Genotype, X)
     x_ = deepcopy(x)
 
-    # TODO Ensure that at least k training data points are matched
+    # TODO Expose repair k parameter/derive meaningful value
+    k = 2
 
-    return x_
+    idx_rm = []
+    for idx in eachindex(x_)
+        if count(elemof(X, x_[idx])) < k
+            push!(idx_rm, idx)
+        end
+    end
+    deleteat!(x_, idx_rm)
+    n_removed = length(idx_rm)
+    if n_removed > 0
+        @info "Removed $n_removed conditions due to less than $k training " *
+              "data matches" operator = "repair"
+    end
+
+    report = (n_removed = n_removed)
+    return x_, report
 end
 
 function select(rng, pop, sols_new)
