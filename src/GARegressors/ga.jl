@@ -15,6 +15,10 @@ struct EvaluatedGenotype
     fitness::Float64
 end
 
+function Base.length(g::EvaluatedGenotype)
+    return Base.length(g.genotype)
+end
+
 """
 Schemes for evaluating fitness.
 
