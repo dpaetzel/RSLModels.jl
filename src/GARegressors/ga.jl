@@ -148,6 +148,11 @@ function evaluate(
 )
     phenotype = express(solution.genotype, X, y, x_min, x_max)
     fitness = ffunc(phenotype)
+    # Note that we don't return a report for `evaluate` yet. If you want to
+    # implement this, consider the fact that `evaluate` typically gets
+    # broadcasted over a vector of solutions/genotypes (and we should therefore
+    # specialize for instead of broadcast over a vector so that reports are
+    # properly concatenated instead of returning a vector of pairs).
     return EvaluatedGenotype(solution.genotype, phenotype, fitness)
 end
 
@@ -176,31 +181,8 @@ function runga(config::GARegressor, X::XType, y::YType)
     end
 
     # Initialize.
-    pop = [
-        evaluate(
-            draw_genotype(
-                DX;
-                spread_min=config.spread_min,
-                # TODO Extract remaining parameters to config
-                spread_max=config.spread_max,
-                params_spread=(
-                    a=config.params_spread_a,
-                    b=config.params_spread_b,
-                ),
-                rate_coverage_min=0.8,
-                remove_final_fully_overlapped=true,
-                # TODO Consider to reduce this number for faster initialization
-                # n_samples
-                x_min=config.x_min,
-                x_max=config.x_max,
-            ),
-            X,
-            y,
-            config.x_min,
-            config.x_max,
-            ffunc,
-        ) for _ in 1:(config.size_pop)
-    ]
+    pop, report = init(config, ffunc, X, y)
+    pop = evaluate.(pop, Ref(X), Ref(y), config.x_min, config.x_max, ffunc)
 
     for iter in 1:(config.n_iter)
         sols_new = []
@@ -227,7 +209,7 @@ function runga(config::GARegressor, X::XType, y::YType)
             push!(sols_new, g2)
         end
 
-        sols_new =
+        sols_new, report =
             evaluate.(
                 sols_new,
                 Ref(X),
@@ -239,10 +221,36 @@ function runga(config::GARegressor, X::XType, y::YType)
         pop[:], report = select(rng, pop, sols_new)
     end
 
-    idx_best = argmax(idx -> getproperty(pop[idx], :fitness), eachindex(pop))
+    idx_best = fittest_idx(pop)
     best = pop[idx_best]
     deleteat!(pop, idx_best)
     return GAResult(best, pop)
+end
+
+function init(config, ffunc, X, y)
+    N, DX = size(X)
+    pop = [
+        draw_genotype(
+            DX;
+            spread_min=config.spread_min,
+            # TODO Extract remaining parameters to config
+            spread_max=config.spread_max,
+            params_spread=(a=config.params_spread_a, b=config.params_spread_b),
+            rate_coverage_min=0.8,
+            remove_final_fully_overlapped=true,
+            # TODO Consider to reduce this number for faster initialization
+            # n_samples
+            x_min=config.x_min,
+            x_max=config.x_max,
+        ) for _ in 1:(config.size_pop)
+    ]
+
+    report = (;)
+    return pop, report
+end
+
+function fittest_idx(pop::AbstractVector{EvaluatedGenotype})
+    return argmax(idx -> getproperty(pop[idx], :fitness), eachindex(pop))
 end
 
 function crossover end
