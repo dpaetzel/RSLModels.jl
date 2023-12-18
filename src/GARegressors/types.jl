@@ -1,5 +1,5 @@
 # TODO Change name
-mutable struct GARegressor1 <: MMI.Probabilistic
+mutable struct GARegressor <: MMI.Probabilistic
     size_pop::Int
     n_iter::Int
     rate_crossover::Float64
@@ -14,7 +14,7 @@ mutable struct GARegressor1 <: MMI.Probabilistic
 end
 
 # TODO Undo struct rename
-GARegressor = GARegressor1
+# GARegressor = GARegressor
 
 params_default = Dict(
     :size_pop => 32,
@@ -31,7 +31,7 @@ params_default = Dict(
     :rng => Random.default_rng(),
 )
 
-function GARegressor1(;
+function GARegressor(;
     size_pop=params_default[:size_pop],
     n_iter=params_default[:n_iter],
     rate_crossover=params_default[:rate_crossover],
@@ -45,7 +45,7 @@ function GARegressor1(;
     x_max=params_default[:x_max],
     rng=params_default[:rng],
 )
-    model = GARegressor1(
+    model = GARegressor(
         size_pop,
         n_iter,
         rate_crossover,
