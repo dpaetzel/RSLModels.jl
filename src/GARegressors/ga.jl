@@ -218,7 +218,12 @@ function runga(config::GARegressor, X::XType, y::YType)
                 Ref(config.x_max),
                 Ref(ffunc),
             )
-        pop[:], report = select(rng, pop, sols_new)
+        @warn "Set lengths properly"
+        @info "Solution lengths in pop: $(length.(pop))"
+        lengths = let med = Int(round(median(length.(pop))))
+            collect((med - 3):(med + 3))
+        end
+        pop[:], report = select(rng, pop, config.size_pop, lengths)
     end
 
     idx_best = fittest_idx(pop)
@@ -370,28 +375,4 @@ function repair(rng::AbstractRNG, g::Genotype, X::XType)
 
     report = (n_removed = n_removed)
     return g_, report
-end
-
-function select(
-    rng::AbstractRNG,
-    pop::AbstractVector{EvaluatedGenotype},
-    sols_new::AbstractVector{EvaluatedGenotype},
-)
-    @warn "`select` not implemented yet"
-
-    # Simplistic tournament selection.
-    size_trnmt = 4
-
-    size_pop = size(pop, 1)
-    pop = [pop; sols_new]
-
-    pop_new = []
-    while size(pop_new, 1) < size_pop
-        idx_trnmt = rand(1:size_pop, size_trnmt)
-        winner = argmax(model -> getproperty(model, :fitness), pop[idx_trnmt])
-        push!(pop_new, winner)
-    end
-
-    report = (;)
-    return pop_new, report
 end

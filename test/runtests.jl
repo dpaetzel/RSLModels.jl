@@ -3,6 +3,7 @@ using Test
 # TODO Find decent property-based testing framework for Julia
 
 include("intervals.jl")
+include("ga.jl")
 
 using RSLModels.Models
 using Random

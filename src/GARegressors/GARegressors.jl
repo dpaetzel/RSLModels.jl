@@ -15,6 +15,7 @@ using ..Scores
 
 include("types.jl")
 include("ga.jl")
+include("select.jl")
 
 export GARegressor
 
