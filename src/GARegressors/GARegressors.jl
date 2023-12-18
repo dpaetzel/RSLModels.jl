@@ -1,5 +1,6 @@
 module GARegressors
 
+using AutoHashEquals
 using Distributions
 using MLJModelInterface: MLJModelInterface
 MMI = MLJModelInterface

@@ -9,7 +9,7 @@ draw_genotype = draw_intervals
 Wrapper to store solutions together with the models they induce as well as their
 fitness score.
 """
-struct EvaluatedGenotype
+@auto_hash_equals struct EvaluatedGenotype
     genotype::Genotype
     phenotype::Models.Model
     fitness::Float64
