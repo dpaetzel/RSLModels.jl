@@ -183,6 +183,17 @@ function runga(config::GARegressor, X::XType, y::YType)
     # Initialize.
     pop, report = init(config, ffunc, X, y)
     pop = evaluate.(pop, Ref(X), Ref(y), config.x_min, config.x_max, ffunc)
+    idx_best::Int = fittest_idx(pop)
+    best::EvaluatedGenotype = pop[idx_best]
+    len_best::Int = length(best)
+
+    # TODO Expose width_window in config; ensure odd-valued (see ryerkerk2020)
+    width_window::Int = 7
+    # TODO Expose lambda_window in config; see ryerkerk2020
+    lambda_window::Float64 = 0.0004
+
+    # Bias factor for ryerkerk2020's biased window mechanism.
+    bias_window::Float64 = 0
 
     for iter in 1:(config.n_iter)
         sols_new = []
@@ -218,16 +229,29 @@ function runga(config::GARegressor, X::XType, y::YType)
                 Ref(config.x_max),
                 Ref(ffunc),
             )
-        @warn "Set lengths properly"
-        @info "Solution lengths in pop: $(length.(pop))"
-        lengths = let med = Int(round(median(length.(pop))))
-            collect((med - 3):(med + 3))
-        end
+
+        # (4) in ryerkerk2020.
+        len_lbound =
+            min(Int(ceil(len_best - width_window / 2 + bias_window)), len_best)
+        len_ubound = max(
+            Int(floor(len_best + width_window / 2 + bias_window)),
+            len_best,
+        )
+        lengths = collect(len_lbound:len_ubound)
+
         pop[:], report = select(rng, pop, config.size_pop, lengths)
+
+        idx_best = fittest_idx(pop)
+        best = pop[idx_best]
+
+        len_best_prev = len_best
+        len_best = length(best)
+        # (3) in ryerkerk2020.
+        bias_window =
+            len_best - len_best_prev +
+            bias_window * exp(-lambda_window * sqrt(abs(bias_window)))
     end
 
-    idx_best = fittest_idx(pop)
-    best = pop[idx_best]
     deleteat!(pop, idx_best)
     return GAResult(best, pop)
 end
