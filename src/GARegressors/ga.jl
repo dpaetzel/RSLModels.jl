@@ -162,7 +162,7 @@ struct GAResult
 end
 
 """
-    runga(DX, ffunc, rng, config)
+Runs the GA based on the given config and training data.
 """
 function runga end
 
@@ -182,6 +182,7 @@ function runga(config::GARegressor, X::XType, y::YType)
 
     # Initialize.
     pop, report = init(config, ffunc, X, y)
+    pop, report = repair.(Ref(rng), pop, Ref(X))
     pop = evaluate.(pop, Ref(X), Ref(y), config.x_min, config.x_max, ffunc)
     idx_best::Int = fittest_idx(pop)
     best::EvaluatedGenotype = pop[idx_best]

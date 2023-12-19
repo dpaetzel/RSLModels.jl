@@ -160,4 +160,20 @@ let
             end
         end
     end
+
+    @testset "express" begin
+        rng = Random.Xoshiro(123)
+
+        let config = deepcopy(config)
+            config.rng = rng
+            pop, _ = GARegressors.init(config, ffunc, X, y)
+
+            for g in pop
+                model =
+                    GARegressors.express(g, X, y, config.x_min, config.x_max)
+
+                @test any([lm.isdefault for lm in model.local_models])
+            end
+        end
+    end
 end
