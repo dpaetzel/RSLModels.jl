@@ -26,8 +26,6 @@ let
                 config.rng = rng
                 pop, _ = GARegressors.init(config, ffunc, X, y)
                 @test length(pop) == config.size_pop
-                # TODO Consider to check whether all training samples matched by
-                # at least one rule per individual (i.e. check_matching_matrix)
             end
         end
     end
@@ -41,15 +39,15 @@ let
                     collect(1:size_subpop),
                     size_niche,
                 )
-                # each individual at least once overall
+                # Each individual takes part in at least one tournament.
                 for idx in 1:size_subpop
                     @test idx in tournaments
                 end
-                # each individual at most once in each tournament
+                # Each individual occurs at most once in each tournament.
                 for idx in eachindex(eachcol(tournaments))
                     @test allunique(tournaments[:, idx])
                 end
-                # each individual at most twice overall
+                # Each individual takes part in not more than two tournaments.
                 @test all(values(countmap(tournaments)) .<= 2)
             end
         end
@@ -68,13 +66,13 @@ let
                     # fitness values are accidentally used as indexes.
                     fitness=x -> x + 100,
                 )
-                # the right number of individuals
+                # The requested number of individuals is selected.
                 @test length(selection) == size_niche
-                # only individuals from the population
+                # Only individuals from the population are selected.
                 for g in selection
                     @test g in subpop
                 end
-                # each individual at most twice overall
+                # Each individual occurs at most twice overall.
                 @test all(values(countmap(selection)) .<= 2)
             end
         end
@@ -104,9 +102,9 @@ let
                             n_select,
                             collect(len_l:len_u),
                         )
-                        # correct selection size
+                        # Selection size is as requested.
                         @test length(selection) == n_select
-                        # selection returns only stuff that is in `pop`
+                        # Selection returns only stuff that is in `pop`.
                         for g in selection
                             # Since `EvaluatedGenotype` uses `auto_hash_equals`, we can
                             # safely compare them.
@@ -114,6 +112,51 @@ let
                         end
                     end
                 end
+            end
+        end
+    end
+
+    @testset "mutate_bounds" begin
+        rng = Random.Xoshiro(123)
+
+        let config = deepcopy(config)
+            config.rng = rng
+            pop, _ = GARegressors.init(config, ffunc, X, y)
+
+            for g in pop
+                g_ = GARegressors.mutate_bounds(rng, g, config)
+
+                # Mutating bounds does not change length.
+                @test length(g_) == length(g)
+
+                for condition in g_
+                    # Input space bounds are respected.
+                    @test all(config.x_min .<= condition.lbound)
+                    @test all(condition.ubound .<= config.x_max)
+
+                    # This is rather trivial because the `Interval` constructor
+                    # also checks for it.
+                    @test all(condition.lbound .<= condition.ubound)
+
+                    # Note that we allow conditions to be empty after mutation.
+                    # @test !isempty(condition)
+                end
+            end
+        end
+    end
+
+    @testset "mutate" begin
+        rng = Random.Xoshiro(123)
+
+        let config = deepcopy(config)
+            config.rng = rng
+            pop, _ = GARegressors.init(config, ffunc, X, y)
+
+            for g in pop
+                g_, _ = GARegressors.mutate(rng, g, X, config)
+
+                # Mutation adds or removes at most one metavariable.
+                @test length(g) - 1 <= length(g_) <= length(g) + 1
             end
         end
     end
