@@ -28,9 +28,12 @@ function mutate(rng, g::Genotype, X::XType, config::GARegressor)
         condition = draw_interval(
             rng,
             x;
-            spread_min=config.spread_min,
-            spread_max=config.spread_max,
-            params_spread=(a=config.params_spread_a, b=config.params_spread_b),
+            spread_min=config.init_spread_min,
+            spread_max=config.init_spread_max,
+            params_spread=(
+                a=config.init_params_spread_a,
+                b=config.init_params_spread_b,
+            ),
             x_min=config.x_min,
             x_max=config.x_max,
         )

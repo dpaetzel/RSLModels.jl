@@ -12,10 +12,10 @@ let
     config = GARegressor(;
         x_min=0.0,
         x_max=1.0,
+        n_iter=5,
         # Increasing this decreases the time drawing a random set
         # of conditions takes.
-        spread_min=0.4,
-        n_iter=5,
+        init_spread_min=0.4,
     )
 
     @testset "init: Correct population size" begin

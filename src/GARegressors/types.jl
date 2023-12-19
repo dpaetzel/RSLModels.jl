@@ -4,10 +4,11 @@ mutable struct GARegressor <: MMI.Probabilistic
     n_iter::Int
     rate_crossover::Float64
     fiteval::Symbol
-    spread_min::Float64
-    spread_max::Float64
-    params_spread_a::Float64
-    params_spread_b::Float64
+    # Initialization parameters.
+    init_spread_min::Float64
+    init_spread_max::Float64
+    init_params_spread_a::Float64
+    init_params_spread_b::Float64
     x_min::Float64
     x_max::Float64
     rng::Union{Int,AbstractRNG}
@@ -22,10 +23,10 @@ params_default = Dict(
     :rate_crossover => 0.9,
     :fiteval => :mae,
     :dgmodel => nothing,
-    :spread_min => 0.0,
-    :spread_max => Inf,
-    :params_spread_a => 1.0,
-    :params_spread_b => 1.0,
+    :init_spread_min => 0.0,
+    :init_spread_max => Inf,
+    :init_params_spread_a => 1.0,
+    :init_params_spread_b => 1.0,
     :x_min => Intervals.X_MIN,
     :x_max => Intervals.X_MAX,
     :rng => Random.default_rng(),
@@ -37,10 +38,10 @@ function GARegressor(;
     rate_crossover=params_default[:rate_crossover],
     fiteval=params_default[:fiteval],
     dgmodel=params_default[:dgmodel],
-    spread_min=params_default[:spread_min],
-    spread_max=params_default[:spread_max],
-    params_spread_a=params_default[:params_spread_a],
-    params_spread_b=params_default[:params_spread_b],
+    init_spread_min=params_default[:init_spread_min],
+    init_spread_max=params_default[:init_spread_max],
+    init_params_spread_a=params_default[:init_params_spread_a],
+    init_params_spread_b=params_default[:init_params_spread_b],
     x_min=params_default[:x_min],
     x_max=params_default[:x_max],
     rng=params_default[:rng],
@@ -50,10 +51,10 @@ function GARegressor(;
         n_iter,
         rate_crossover,
         fiteval,
-        spread_min,
-        spread_max,
-        params_spread_a,
-        params_spread_b,
+        init_spread_min,
+        init_spread_max,
+        init_params_spread_a,
+        init_params_spread_b,
         x_min,
         x_max,
         rng,

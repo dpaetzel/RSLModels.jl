@@ -262,10 +262,13 @@ function init(config, ffunc, X, y)
     pop = [
         draw_genotype(
             DX;
-            spread_min=config.spread_min,
+            spread_min=config.init_spread_min,
             # TODO Extract remaining parameters to config
-            spread_max=config.spread_max,
-            params_spread=(a=config.params_spread_a, b=config.params_spread_b),
+            spread_max=config.init_spread_max,
+            params_spread=(
+                a=config.init_params_spread_a,
+                b=config.init_params_spread_b,
+            ),
             rate_coverage_min=0.8,
             remove_final_fully_overlapped=true,
             # TODO Consider to reduce this number for faster initialization

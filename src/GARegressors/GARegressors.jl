@@ -63,32 +63,35 @@ function MMI.clean!(m::GARegressor)
     end
 
     spread_min_max = (m.x_max - m.x_min) / 2
-    if !(0 <= m.spread_min <= spread_min_max)
+    if !(0 <= m.init_spread_min <= spread_min_max)
         warning *=
-            "Parameter `spread_min` expected to be in [0, $spread_min_max], " *
-            "resetting to $(params_default[:spread_min])"
-        m.spread_min = params_default[:spread_min]
+            "Parameter `init_spread_min` expected to be in " *
+            "[0, $spread_min_max], " *
+            "resetting to $(params_default[:init_spread_min])"
+        m.init_spread_min = params_default[:init_spread_min]
     end
 
-    if !(0 <= m.spread_max)
+    if !(0 <= m.init_spread_max)
         warning *=
-            "Parameter `spread_max` expected to be in [0, Inf), " *
-            "resetting to $(params_default[:spread_max])"
-        m.spread_max = params_default[:spread_max]
+            "Parameter `init_spread_max` expected to be in [0, Inf), " *
+            "resetting to $(params_default[:init_spread_max])"
+        m.init_spread_max = params_default[:init_spread_max]
     end
 
-    if !(0 < m.params_spread_a)
+    if !(0 < m.init_params_spread_a)
         warning *=
-            "Parameter `params_spread_a` expected to be in (0, Inf), " *
-            "resetting to $(params_default[:params_spread_a])"
-        m.params_spread_a = params_default[:params_spread_a]
+            "Parameter `init_params_spread_a` expected to be in " *
+            "(0, Inf), " *
+            "resetting to $(params_default[:init_params_spread_a])"
+        m.init_params_spread_a = params_default[:init_params_spread_a]
     end
 
-    if !(0 < m.params_spread_b)
+    if !(0 < m.init_params_spread_b)
         warning *=
-            "Parameter `params_spread_b` expected to be in (0, Inf), " *
-            "resetting to $(params_default[:params_spread_b])"
-        m.params_spread_b = params_default[:params_spread_b]
+            "Parameter `init_params_spread_b` expected to be in " *
+            " (0, Inf), " *
+            "resetting to $(params_default[:init_params_spread_b])"
+        m.init_params_spread_b = params_default[:init_params_spread_b]
     end
 
     return warning
