@@ -5,6 +5,8 @@ const YType::DataType = AbstractVector{Float64}
 
 draw_genotype = draw_intervals
 
+unzip(a) = map(x -> getfield.(a, x), fieldnames(eltype(a)))
+
 """
 Wrapper to store solutions together with the models they induce as well as their
 fitness score.
@@ -123,8 +125,6 @@ end
 """
 Evaluate the given solution genotype using the given fitness function.
 """
-function evaluate end
-
 function evaluate(
     genotype::Genotype,
     X::XType,
@@ -166,7 +166,7 @@ Runs the GA based on the given config and training data.
 """
 function runga end
 
-function runga(config::GARegressor, X::XType, y::YType)
+function runga(X::XType, y::YType, config::GARegressor)
     # Note that this does not perform checks on the config but instead assumes
     # that it is valid.
 
@@ -181,9 +181,21 @@ function runga(config::GARegressor, X::XType, y::YType)
     end
 
     # Initialize.
-    pop, report = init(config, ffunc, X, y)
-    pop, report = repair.(Ref(rng), pop, Ref(X))
-    pop = evaluate.(pop, Ref(X), Ref(y), config.x_min, config.x_max, ffunc)
+    #
+    # Count number of evaluations.
+    n_eval = 0
+    pop_uneval, report = init(ffunc, X, y, config)
+    pop_uneval[:], reports = unzip(repair.(Ref(rng), pop_uneval, Ref(X)))
+    pop =
+        evaluate.(
+            pop_uneval,
+            Ref(X),
+            Ref(y),
+            config.x_min,
+            config.x_max,
+            ffunc,
+        )
+    n_eval += length(pop)
     idx_best::Int = fittest_idx(pop)
     best::EvaluatedGenotype = pop[idx_best]
     len_best::Int = length(best)
@@ -197,7 +209,8 @@ function runga(config::GARegressor, X::XType, y::YType)
     bias_window::Float64 = 0
 
     for iter in 1:(config.n_iter)
-        sols_new = []
+        # TODO Consider to speed this up by inplace mutating a fixed array
+        offspring_uneval = []
 
         idx_rand = reshape(randperm(config.size_pop), 2, :)
 
@@ -217,19 +230,20 @@ function runga(config::GARegressor, X::XType, y::YType)
             g1, report = repair(rng, g1, X)
             g2, report = repair(rng, g2, X)
 
-            push!(sols_new, g1)
-            push!(sols_new, g2)
+            push!(offspring_uneval, g1)
+            push!(offspring_uneval, g2)
         end
 
-        sols_new, report =
+        offspring, report =
             evaluate.(
-                sols_new,
+                offspring_uneval,
                 Ref(X),
                 Ref(y),
                 Ref(config.x_min),
                 Ref(config.x_max),
                 Ref(ffunc),
             )
+        n_eval += length(pop)
 
         # (4) in ryerkerk2020.
         len_lbound =
@@ -240,7 +254,8 @@ function runga(config::GARegressor, X::XType, y::YType)
         )
         lengths = collect(len_lbound:len_ubound)
 
-        pop[:], report = select(rng, pop, config.size_pop, lengths)
+        pop[:], report =
+            select(rng, vcat(pop, offspring), config.size_pop, lengths)
 
         idx_best = fittest_idx(pop)
         best = pop[idx_best]
@@ -254,10 +269,11 @@ function runga(config::GARegressor, X::XType, y::YType)
     end
 
     deleteat!(pop, idx_best)
-    return GAResult(best, pop)
+    report = (; bias_window=bias_window, n_eval=n_eval)
+    return GAResult(best, pop), report
 end
 
-function init(config, ffunc, X, y)
+function init(ffunc, X, y, config)
     N, DX = size(X)
     pop = [
         draw_genotype(
@@ -312,6 +328,7 @@ function repair(rng::AbstractRNG, g::EvaluatedGenotype, X::XType)
 end
 
 function repair(rng::AbstractRNG, g::Genotype, X::XType)
+    # TODO Consider to make this repair! and mutate g (i.e. deleteat!) directly
     g_ = deepcopy(g)
 
     # TODO Expose repair k parameter/derive meaningful value
@@ -330,6 +347,6 @@ function repair(rng::AbstractRNG, g::Genotype, X::XType)
               "data matches" operator = "repair"
     end
 
-    report = (n_removed = n_removed)
+    report = (; n_removed=n_removed)
     return g_, report
 end

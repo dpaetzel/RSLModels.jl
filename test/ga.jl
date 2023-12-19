@@ -24,7 +24,7 @@ let
             let config = deepcopy(config)
                 config.size_pop = size_pop
                 config.rng = rng
-                pop, _ = GARegressors.init(config, ffunc, X, y)
+                pop, _ = GARegressors.init(ffunc, X, y, config)
                 @test length(pop) == config.size_pop
             end
         end
@@ -83,7 +83,7 @@ let
 
         let config = deepcopy(config)
             config.rng = rng
-            pop, _ = GARegressors.init(config, ffunc, X, y)
+            pop, _ = GARegressors.init(ffunc, X, y, config)
             pop =
                 GARegressors.evaluate.(
                     pop,
@@ -121,7 +121,7 @@ let
 
         let config = deepcopy(config)
             config.rng = rng
-            pop, _ = GARegressors.init(config, ffunc, X, y)
+            pop, _ = GARegressors.init(ffunc, X, y, config)
 
             for g in pop
                 g_ = GARegressors.mutate_bounds(rng, g, config)
@@ -150,7 +150,7 @@ let
 
         let config = deepcopy(config)
             config.rng = rng
-            pop, _ = GARegressors.init(config, ffunc, X, y)
+            pop, _ = GARegressors.init(ffunc, X, y, config)
 
             for g in pop
                 g_, _ = GARegressors.mutate(rng, g, X, config)
@@ -166,7 +166,7 @@ let
 
         let config = deepcopy(config)
             config.rng = rng
-            pop, _ = GARegressors.init(config, ffunc, X, y)
+            pop, _ = GARegressors.init(ffunc, X, y, config)
 
             for g in pop
                 model =
@@ -174,6 +174,19 @@ let
 
                 @test any([lm.isdefault for lm in model.local_models])
             end
+        end
+    end
+
+    @testset "runga" begin
+        rng = Random.Xoshiro(123)
+
+        let config = deepcopy(config)
+            config.rng = rng
+
+            garesult, report = GARegressors.runga(X, y, config)
+
+            # This may change depending on the exact GA implementation used.
+            @test report.n_eval == config.size_pop * (config.n_iter + 1)
         end
     end
 end

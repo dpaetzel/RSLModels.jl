@@ -5,7 +5,7 @@ using Distributions
 using MLJModelInterface: MLJModelInterface
 MMI = MLJModelInterface
 using Random
-using MLJ
+using MLJ: mae
 
 using ..AbstractModels
 using ..Intervals
@@ -102,12 +102,11 @@ function MMI.fit(m::GARegressor, verbosity, X, y)
     # on `X` or `y` or to call `clean!` on the model; MLJ will carry out such
     # checks.”
 
-    fitresult = runga(m, X, y)
+    fitresult, report = runga(MMI.matrix(X), y, m)
 
     cache = nothing
     # TODO Add convergence behaviour (elitist/mean fitness progression) etc. into
     # report
-    report = (;)
     return fitresult, cache, report
 end
 
