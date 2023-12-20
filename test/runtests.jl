@@ -2,6 +2,7 @@ using Test
 
 # TODO Find decent property-based testing framework for Julia
 
+include("MLJInterface.jl")
 include("intervals.jl")
 include("ga.jl")
 
