@@ -4,6 +4,7 @@ using AutoHashEquals
 using Distributions
 using MLJModelInterface: MLJModelInterface
 MMI = MLJModelInterface
+using MLUtils
 using Random
 using MLJ: mae
 

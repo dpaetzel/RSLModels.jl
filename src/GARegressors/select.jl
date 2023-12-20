@@ -122,7 +122,7 @@ function trnmt_plan(rng::AbstractRNG, subpop::AbstractVector, n_select::Int)
     # * n_select != length(subpop)`. This is (as are most other arrays in this
     # function) an array of *indices* into `subpop`.
     tournaments = reshape(
-        rpad(
+        rpad_constant(
             indices,
             # Tournament plan length.
             size_tournament * n_select,
