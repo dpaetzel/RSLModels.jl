@@ -114,8 +114,9 @@ end
 function MMI.predict(m::GARegressor, fitresult, Xnew)
     # TODO Consider to allow building an ensemble here
     # TODO Refactor output_* to an output_dist function
-    means = output_mean(fitresult.best.phenotype, Xnew)
-    vars = output_variance(fitresult.best.phenotype, Xnew)
+    Xnew_mat = MMI.matrix(Xnew)
+    means = output_mean(fitresult.best.phenotype, Xnew_mat)
+    vars = output_variance(fitresult.best.phenotype, Xnew_mat)
 
     return Normal.(means, sqrt.(vars))
 end
