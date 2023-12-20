@@ -343,8 +343,8 @@ function repair(rng::AbstractRNG, g::Genotype, X::XType)
     deleteat!(g_, idx_rm)
     n_removed = length(idx_rm)
     if n_removed > 0
-        @info "Removed $n_removed conditions due to less than $k training " *
-              "data matches" operator = "repair"
+        @debug "Removed $n_removed conditions due to less than $k training " *
+               "data matches" operator = "repair"
     end
 
     report = (; n_removed=n_removed)

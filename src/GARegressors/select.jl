@@ -12,7 +12,7 @@ function select(
     len_best = length(pop[idx_best])
 
     n_niches = length(lengths)
-    @info "select: Using $n_niches niches for population of size $(length(pop))"
+    @debug "select: Using $n_niches niches for population of size $(length(pop))"
 
     # If `size_pop` is not divisible by the number of niches, the `r` closest
     # lengths to the best solution's length each get one more space.
@@ -29,11 +29,11 @@ function select(
         pop_i = [g for g in pop if length(g) == size_niche[i]]
 
         if isempty(pop_i)
-            @info "select: Empty niche at length $len"
+            @debug "select: Empty niche at length $len"
             selection_i_ = []
         else
-            @info "select: Performing tournament selection within niche at " *
-                  "length $len"
+            @debug "select: Performing tournament selection within niche at " *
+                   "length $len"
             selection_i_, report =
                 select_trnmt_niche(rng, pop_i, size_niche[i])
         end
