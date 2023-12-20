@@ -231,6 +231,8 @@ function AbstractModels.output_mean(
     X::AbstractMatrix{Float64};
     matching_matrix::AbstractMatrix{Bool}=match(model, X),
 )
+    check_matching_matrix(matching_matrix; X=X)
+
     outs = AbstractModels.output_mean(model.local_models, X)
     return mix(model.local_models, outs, matching_matrix)
 end
@@ -245,6 +247,8 @@ function AbstractModels.output_variance(
     X::AbstractMatrix{Float64};
     matching_matrix::AbstractMatrix{Bool}=match(model, X),
 )
+    check_matching_matrix(matching_matrix; X=X)
+
     vars = [m.dist_out.σ for m in model.local_models]
     mix = mixing(model.local_models, matching_matrix)
     return vec(sum(vars' .* mix .^ 2; dims=2))
@@ -252,12 +256,20 @@ end
 
 """
 Compute a mixing weight for each local model for each data point.
+
+
+# Arguments
+
+- `nocheck::Bool=true`: Whether to check the matching matrix.
 """
 function mixing(
     models::AbstractVector{ConstantModel},
-    matching_matrix::AbstractMatrix{Bool},
+    matching_matrix::AbstractMatrix{Bool};
+    nocheck::Bool=true,
 )
-    check_matching_matrix(matching_matrix)
+    if !nocheck
+        check_matching_matrix(matching_matrix)
+    end
 
     coefs_mix = [model.coef_mix for model in models]
     coefs_mix = coefs_mix' .* matching_matrix
@@ -295,12 +307,24 @@ end
 """
 Check the matching matrix for all data points being matched by at least one
 rule.
+
+You can provide an input matrix `X` to get slightly better error messages.
 """
-function check_matching_matrix(matching_matrix::AbstractMatrix{Bool})
+function check_matching_matrix(
+    matching_matrix::AbstractMatrix{Bool};
+    X::AbstractMatrix{Float64}=nothing,
+)
     # Check whether any row is all zeroes.
-    if any(sum(matching_matrix; dims=2) .== 0)
-        println(matching_matrix)
-        error("some samples are unmatched, add a default rule")
+    unmatched = vec(sum(matching_matrix; dims=2) .== 0)
+    if any(unmatched)
+        if X == nothing
+            error("some samples are unmatched, add a default rule")
+        else
+            error(
+                "some samples are unmatched, add a default rule; unmatched " *
+                "samples are $(X[unmatched, :])",
+            )
+        end
     end
 end
 
