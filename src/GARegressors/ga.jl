@@ -177,6 +177,13 @@ function runga(X::XType, y::YType, config::GARegressor)
     if config.fiteval == :mae
         ffunc = mkffunc(MAEFitness(X, y))
     elseif config.fiteval == :dissimilarity
+        if config.dgmodel == nothing
+            throw(
+                ArgumentError(
+                    "dgmodel != nothing required for fiteval == :dissimilarity",
+                ),
+            )
+        end
         ffunc = mkffunc(DissimFitness(config.dgmodel, X))
     end
 
@@ -217,7 +224,7 @@ function runga(X::XType, y::YType, config::GARegressor)
         # Iterating over columns is faster b/c of Julia arrays using
         # column-major order.
         for (idx1, idx2) in eachcol(idx_rand)
-            if rand(rng) <= config.rate_crossover
+            if rand(rng) <= config.recomb_rate
                 # TODO Gotta copy in crossover if needed
                 g1, g2, report = crossover(rng, pop[idx1], pop[idx2])
             else

@@ -39,11 +39,11 @@ function MMI.clean!(m::GARegressor)
         m.n_iter = params_default[:n_iter]
     end
 
-    if !(0 <= m.rate_crossover <= 1)
+    if !(0 <= m.recomb_rate <= 1)
         warning *=
-            "Parameter `rate_crossover` expected to be in [0, 1], " *
-            "resetting to $(params_default[:rate_crossover])"
-        m.rate_crossover = params_default[:rate_crossover]
+            "Parameter `recomb_rate` expected to be in [0, 1], " *
+            "resetting to $(params_default[:recomb_rate])"
+        m.recomb_rate = params_default[:recomb_rate]
     end
 
     if !(m.fiteval ∈ [:mae, :dissimilarity])
