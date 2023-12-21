@@ -6,12 +6,13 @@ mutable struct GARegressor <: MMI.Probabilistic
     rng::Union{Int,AbstractRNG}
     x_min::Float64
     x_max::Float64
+    nmatch_min::Int
     # Initialization parameters.
     init_spread_min::Float64
     init_spread_max::Float64
     init_params_spread_a::Float64
     init_params_spread_b::Float64
-    # Recombination parmeters.
+    # Recombination parameters.
     recomb_rate::Float64
 end
 
@@ -23,6 +24,7 @@ params_default = Dict(
     :rng => Random.default_rng(),
     :x_min => Intervals.X_MIN,
     :x_max => Intervals.X_MAX,
+    :nmatch_min => 2,
     # Initialization parameters.
     :init_spread_min => 0.0,
     :init_spread_max => Inf,
@@ -32,6 +34,16 @@ params_default = Dict(
     :recomb_rate => 0.9,
 )
 
+"""
+    GARegressor(; <keyword arguments>)
+
+# Arguments
+
+- `nmatch_min::Int=$(params_default[:nmatch_min])`: Minimum number of training
+  data points to be matched by any rule so that the rule is considered during
+  training/prediction. The repair operator applied on all individuals deletes
+  rules with less than `nmatch_min` matched training data points.
+"""
 function GARegressor(;
     n_iter=params_default[:n_iter],
     size_pop=params_default[:size_pop],
@@ -40,6 +52,7 @@ function GARegressor(;
     rng=params_default[:rng],
     x_min=params_default[:x_min],
     x_max=params_default[:x_max],
+    nmatch_min=params_default[:nmatch_min],
     # Initialization parameters.
     init_spread_min=params_default[:init_spread_min],
     init_spread_max=params_default[:init_spread_max],
@@ -56,6 +69,7 @@ function GARegressor(;
         rng,
         x_min,
         x_max,
+        nmatch_min,
         # Initialization parameters.
         init_spread_min,
         init_spread_max,

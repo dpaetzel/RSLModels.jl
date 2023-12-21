@@ -92,6 +92,7 @@ let
                     config.x_min,
                     config.x_max,
                     ffunc,
+                    config.nmatch_min,
                 )
             for n_select in 1:length(pop)
                 for len_l in 1:(maximum(length.(pop)) + 1)
@@ -169,8 +170,14 @@ let
             pop, _ = GARegressors.init(ffunc, X, y, config)
 
             for g in pop
-                model =
-                    GARegressors.express(g, X, y, config.x_min, config.x_max)
+                model = GARegressors.express(
+                    g,
+                    X,
+                    y,
+                    config.x_min,
+                    config.x_max,
+                    config.nmatch_min,
+                )
 
                 @test any([lm.isdefault for lm in model.local_models])
             end
@@ -187,6 +194,22 @@ let
 
             # This may change depending on the exact GA implementation used.
             @test report.n_eval == config.size_pop * (config.n_iter + 1)
+        end
+    end
+
+    @testset "nmatch_min" begin
+        rng = Random.Xoshiro(123)
+
+        let config = deepcopy(config)
+            config.rng = rng
+
+            for nmatch_min in [2, 5]
+                config.nmatch_min = nmatch_min
+                garesult, report = GARegressors.runga(X, y, config)
+                for condition in garesult.best.phenotype.conditions
+                    @test sum(elemof(X, condition)) >= nmatch_min
+                end
+            end
         end
     end
 end

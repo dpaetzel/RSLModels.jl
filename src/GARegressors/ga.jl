@@ -83,7 +83,14 @@ Express the given genotype, yielding a phenotype.
 This is achieved by fitting a rule set model for based on the set of conditions
 specified by the genotype.
 """
-function express(genotype::Genotype, X::XType, y::YType, x_min, x_max)
+function express(
+    genotype::Genotype,
+    X::XType,
+    y::YType,
+    x_min,
+    x_max,
+    nmatch_min::Int,
+)
     # TODO Consider to cache matching
     N, DX = size(X)
 
@@ -96,7 +103,7 @@ function express(genotype::Genotype, X::XType, y::YType, x_min, x_max)
         # TODO Expose this parameter as match_min or something like that
         # TODO Disable this test if `repair` is used
         # If too few training data points are matched, ignore the condition.
-        if length(y_matched) < 2
+        if length(y_matched) < nmatch_min
             push!(idx_rm, idx)
         else
             dist_out = fit_mle(Normal, y_matched)
@@ -132,8 +139,9 @@ function evaluate(
     x_min::Float64,
     x_max::Float64,
     ffunc::Function,
+    nmatch_min::Int,
 )
-    phenotype = express(genotype, X, y, x_min, x_max)
+    phenotype = express(genotype, X, y, x_min, x_max, nmatch_min)
     fitness = ffunc(phenotype)
     return EvaluatedGenotype(genotype, phenotype, fitness)
 end
@@ -145,8 +153,9 @@ function evaluate(
     x_min::Float64,
     x_max::Float64,
     ffunc::Function,
+    nmatch_min::Int,
 )
-    phenotype = express(solution.genotype, X, y, x_min, x_max)
+    phenotype = express(solution.genotype, X, y, x_min, x_max, nmatch_min)
     fitness = ffunc(phenotype)
     # Note that we don't return a report for `evaluate` yet. If you want to
     # implement this, consider the fact that `evaluate` typically gets
@@ -192,7 +201,8 @@ function runga(X::XType, y::YType, config::GARegressor)
     # Count number of evaluations.
     n_eval = 0
     pop_uneval, report = init(ffunc, X, y, config)
-    pop_uneval[:], reports = unzip(repair.(Ref(rng), pop_uneval, Ref(X)))
+    pop_uneval[:], reports =
+        unzip(repair.(Ref(rng), pop_uneval, Ref(X), Ref(config.nmatch_min)))
     pop =
         evaluate.(
             pop_uneval,
@@ -201,6 +211,7 @@ function runga(X::XType, y::YType, config::GARegressor)
             config.x_min,
             config.x_max,
             ffunc,
+            config.nmatch_min,
         )
     n_eval += length(pop)
     idx_best::Int = fittest_idx(pop)
@@ -234,8 +245,8 @@ function runga(X::XType, y::YType, config::GARegressor)
             g1, report = mutate(rng, g1, X, config)
             g2, report = mutate(rng, g2, X, config)
 
-            g1, report = repair(rng, g1, X)
-            g2, report = repair(rng, g2, X)
+            g1, report = repair(rng, g1, X, config.nmatch_min)
+            g2, report = repair(rng, g2, X, config.nmatch_min)
 
             push!(offspring_uneval, g1)
             push!(offspring_uneval, g2)
@@ -249,6 +260,7 @@ function runga(X::XType, y::YType, config::GARegressor)
                 Ref(config.x_min),
                 Ref(config.x_max),
                 Ref(ffunc),
+                Ref(config.nmatch_min),
             )
         n_eval += length(offspring)
 
@@ -331,16 +343,20 @@ Ensure that each rule matches at least a certain number of training data points.
 """
 function repair end
 
-function repair(rng::AbstractRNG, g::EvaluatedGenotype, X::XType)
-    return repair(rng, g.genotype, X)
+function repair(
+    rng::AbstractRNG,
+    g::EvaluatedGenotype,
+    X::XType,
+    nmatch_min::Int,
+)
+    return repair(rng, g.genotype, X, nmatch_min)
 end
 
-function repair(rng::AbstractRNG, g::Genotype, X::XType)
+function repair(rng::AbstractRNG, g::Genotype, X::XType, nmatch_min::Int)
     # TODO Consider to make this repair! and mutate g (i.e. deleteat!) directly
     g_ = deepcopy(g)
 
-    # TODO Expose repair k parameter/derive meaningful value
-    k = 2
+    k = nmatch_min
 
     idx_rm = []
     for idx in eachindex(g_)
