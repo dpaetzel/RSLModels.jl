@@ -52,6 +52,8 @@ function select(
         append!(selection, selection_filler)
     end
 
+    @assert length(selection) == n_select
+
     report = (;)
     return selection, report
 end

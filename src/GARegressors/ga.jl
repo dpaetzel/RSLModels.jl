@@ -234,7 +234,7 @@ function runga(X::XType, y::YType, config::GARegressor)
             push!(offspring_uneval, g2)
         end
 
-        offspring, report =
+        offspring =
             evaluate.(
                 offspring_uneval,
                 Ref(X),
@@ -243,7 +243,7 @@ function runga(X::XType, y::YType, config::GARegressor)
                 Ref(config.x_max),
                 Ref(ffunc),
             )
-        n_eval += length(pop)
+        n_eval += length(offspring)
 
         # (4) in ryerkerk2020.
         len_lbound =
@@ -254,8 +254,9 @@ function runga(X::XType, y::YType, config::GARegressor)
         )
         lengths = collect(len_lbound:len_ubound)
 
-        pop[:], report =
+        selection, report =
             select(rng, vcat(pop, offspring), config.size_pop, lengths)
+        pop[:] = selection
 
         idx_best = fittest_idx(pop)
         best = pop[idx_best]
