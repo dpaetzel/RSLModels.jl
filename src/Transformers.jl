@@ -82,6 +82,10 @@ end
 # definition of Standardizer at
 # https://github.com/JuliaAI/MLJModels.jl/blob/dev/src/builtins/Transformers.jl#L491 .
 
+# TODO Add {input,target}_scitype
+# MMI.input_scitype(::Type{<:MinMaxScaler}) = MMI.Table(MMI.Continuous)
+# MMI.target_scitype(::Type{<:MinMaxScaler}) = AbstractVector{<:MMI.Continuous}
+
 mutable struct MinMaxScaler <: Unsupervised
     # features to be standardized; empty means all
     features::Union{AbstractVector{Symbol},Function}
