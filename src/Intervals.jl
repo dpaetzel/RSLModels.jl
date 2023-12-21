@@ -388,7 +388,7 @@ function draw_intervals(
     return_coverage_rate::Bool=false,
     verbose::Int=0,
 )
-    if usemmap
+    X::Matrix{Float64}, m::Vector{Bool} = if usemmap
         (path_X, io_X) = mktemp(tempdir())
         X = mmap(io_X, Matrix{Float64}, (n_samples, dims))
         for i in eachindex(X)
@@ -397,9 +397,11 @@ function draw_intervals(
 
         (path_m, io_m) = mktemp(tempdir())
         m = mmap(io_m, Vector{Bool}, n_samples)
+        X, m
     else
         X = rand(rng, n_samples, dims) .* (x_max - x_min)
         m = Vector{Bool}(undef, n_samples)
+        X, m
     end
 
     # Note that `M` this is a vector of a few hundred vectors at most and we
@@ -407,18 +409,14 @@ function draw_intervals(
     # dynamic nature of `M`).
     M = Vector{Bool}[]
     matched = fill(false, n_samples)
-    intervals::AbstractVector{Interval} = []
+    intervals::Vector{Interval} = Interval[]
 
     rate_coverage = 0.0
 
     while rate_coverage < rate_coverage_min &&
         (n_intervals_max == nothing || length(intervals) < n_intervals_max)
-        if verbose >= 10
-            println(
-                "Current coverage: $(round(rate_coverage; digits=2)) " *
-                "of required $rate_coverage_min",
-            )
-        end
+        @debug "Current coverage: $(round(rate_coverage; digits=2)) " *
+               "of required $rate_coverage_min"
 
         # TODO Consider to enforce matching a configurable number of data points
 
@@ -468,8 +466,8 @@ function draw_intervals(
     end
 
     # Not 100% sure whether this reassignment is necessary.
-    X = 0.0
-    m = 0.0
+    # X = [0.0 0.0]
+    # m = [0.0]
     if usemmap
         # TODO Consider to use a finalizer here to be sure
         close(io_X)

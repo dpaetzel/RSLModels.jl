@@ -199,11 +199,11 @@ function runga(X::XType, y::YType, config::GARegressor)
     # Initialize.
     #
     # Count number of evaluations.
-    n_eval = 0
-    pop_uneval, report = init(ffunc, X, y, config)
+    n_eval::Int = 0
+    pop_uneval::Vector{Genotype}, report = init(ffunc, X, y, config)
     pop_uneval[:], reports =
         unzip(repair.(Ref(rng), pop_uneval, Ref(X), Ref(config.nmatch_min)))
-    pop =
+    pop::Vector{EvaluatedGenotype} =
         evaluate.(
             pop_uneval,
             Ref(X),
@@ -293,9 +293,9 @@ function runga(X::XType, y::YType, config::GARegressor)
     return GAResult(best, pop), report
 end
 
-function init(ffunc, X, y, config)
+function init(ffunc::Function, X, y, config::GARegressor)
     N, DX = size(X)
-    pop = [
+    pop::Vector{Genotype} = [
         draw_genotype(
             DX;
             spread_min=config.init_spread_min,
