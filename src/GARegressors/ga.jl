@@ -314,7 +314,7 @@ function crossover(
 end
 
 function crossover(rng::AbstractRNG, g1::Genotype, g2::Genotype)
-    @warn "`crossover` not implemented yet"
+    @warn "`crossover` not implemented yet" maxlog = 5
     report = (;)
     return deepcopy(g1), deepcopy(g2), report
 end
