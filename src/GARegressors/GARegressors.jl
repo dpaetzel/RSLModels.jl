@@ -31,8 +31,6 @@ function fixparamdomain!(m, symbol, pred, desc)
     end
 end
 
-m = GARegressor()
-
 function MMI.clean!(m::GARegressor)
     warning = ""
 
