@@ -2,7 +2,7 @@
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "bfaf25dcd6774ee980028b3a63c8707e1bb80014"
+project_hash = "ccf3ce079236f902d7d3ce09832f7ecc5bc0670a"
 
 [[deps.ARFFFiles]]
 deps = ["CategoricalArrays", "Dates", "Parsers", "Tables"]
@@ -163,6 +163,12 @@ uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 git-tree-sha1 = "aebf55e6d7795e02ca500a689d326ac979aaf89e"
 uuid = "9718e550-a3fa-408a-8086-8db961cd8217"
 version = "0.1.1"
+
+[[deps.BenchmarkTools]]
+deps = ["JSON", "Logging", "Printf", "Profile", "Statistics", "UUIDs"]
+git-tree-sha1 = "f1f03a9fa24271160ed7e73051fba3c1a759b53f"
+uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+version = "1.4.0"
 
 [[deps.BitFlags]]
 git-tree-sha1 = "2dc09997850d68179b69dafb58ae806167a32b1b"
