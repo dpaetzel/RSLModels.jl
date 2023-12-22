@@ -116,8 +116,8 @@ function MMI.clean!(m::GARegressor)
     warning *= fixparamdomain!(
         m,
         :select_width_window,
-        x -> 1 <= x <= m.size_pop,
-        "in [1, $(m.size_pop)]",
+        x -> 1 <= x <= m.size_pop && x % 2 == 1,
+        "in [1, $(m.size_pop)] and odd-valued",
     )
 
     warning *= fixparamdomain!(

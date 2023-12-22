@@ -249,9 +249,7 @@ function runga(X::XType, y::YType, config::GARegressor)
     best::EvaluatedGenotype = pop[idx_best]
     len_best::Int = length(best)
 
-    # TODO Expose width_window in config; ensure odd-valued (see ryerkerk2020)
     width_window::Int = 7
-    # TODO Expose lambda_window in config; see ryerkerk2020
     lambda_window::Float64 = 0.0004
 
     # Bias factor for ryerkerk2020's biased window mechanism.
