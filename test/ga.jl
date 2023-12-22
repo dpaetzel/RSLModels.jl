@@ -7,7 +7,8 @@ using Random
 using StatsBase
 
 let
-    X, y = rand(300, 5), rand(300)
+    DX = 5
+    X, y = rand(300, DX), rand(300)
     ffunc = GARegressors.mkffunc(GARegressors.MAEFitness(X, y))
     config = GARegressor(;
         x_min=0.0,
@@ -17,6 +18,7 @@ let
         # of conditions takes.
         init_spread_min=0.4,
     )
+    model = draw_model(DX)
 
     @testset "init: Correct population size" begin
         rng = Random.Xoshiro(123)
@@ -196,13 +198,17 @@ let
     @testset "runga" begin
         rng = Random.Xoshiro(123)
 
-        let config = deepcopy(config)
-            config.rng = rng
+        for fiteval in [:mae, :dissimilarity, :likelihood]
+            let config = deepcopy(config)
+                config.rng = rng
+                config.fiteval = fiteval
+                config.dgmodel = model
 
-            garesult, report = GARegressors.runga(X, y, config)
+                garesult, report = GARegressors.runga(X, y, config)
 
-            # This may change depending on the exact GA implementation used.
-            @test report.n_eval == config.size_pop * (config.n_iter + 1)
+                # This may change depending on the exact GA implementation used.
+                @test report.n_eval == config.size_pop * (config.n_iter + 1)
+            end
         end
     end
 

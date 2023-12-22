@@ -48,7 +48,7 @@ function MMI.clean!(m::GARegressor)
     warning *= fixparamdomain!(
         m,
         :fiteval,
-        x -> x ∈ [:mae, :dissimilarity],
+        x -> x ∈ [:mae, :dissimilarity, :likelihood],
         "one of {:mae, :dissimilarity}",
     )
 
@@ -145,12 +145,8 @@ end
 
 function MMI.predict(m::GARegressor, fitresult, Xnew)
     # TODO Consider to allow building an ensemble here
-    # TODO Refactor output_* to an output_dist function
     Xnew_mat = MMI.matrix(Xnew)
-    means = output_mean(fitresult.best.phenotype, Xnew_mat)
-    vars = output_variance(fitresult.best.phenotype, Xnew_mat)
-
-    return Normal.(means, sqrt.(vars))
+    return output_dist(fitresult.best.phenotype, Xnew_mat)
 end
 
 MMI.input_scitype(::Type{<:GARegressor}) = MMI.Table(MMI.Continuous)

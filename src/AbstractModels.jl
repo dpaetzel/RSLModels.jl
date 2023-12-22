@@ -1,6 +1,6 @@
 module AbstractModels
 
-export output, output_mean, output_variance
+export output, output_dist, output_mean, output_variance
 
 inputs_required = """
 Requires (an) input(s), if the model's output distribution depends on an input
@@ -16,6 +16,14 @@ distribution.
 $inputs_required
 """
 function output end
+# TODO Use Random.rand combined with the output distribution instead probably
+
+"""
+Return the model's output distribution.
+
+$inputs_required
+"""
+function output_dist end
 
 """
 Return the model's output distribution's mean.

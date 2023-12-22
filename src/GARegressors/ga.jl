@@ -45,8 +45,22 @@ struct DissimFitness <: FitnessEvaluation
     X::XType
 end
 
-# TODO Add CV-based fitness evaluation scheme
-# TODO struct MLEFitness <: FitnessEvaluation end
+"""
+A log-likelihood–based fitness, i.e. fitness corresponds to
+
+```math
+log \\prod_i p(y_i | θ, X_i) = \\sum_i log p(y_i | θ, X_i)
+```
+
+where `X`, `y` is the training data and `θ` are the model parameters.
+"""
+struct LikelihoodFitness <: FitnessEvaluation
+    X::XType
+    y::YType
+end
+
+# TODO Add more fitness evaluation schemes
+# TODO struct CVFitness <: FitnessEvaluation end
 # TODO struct MAPFitness <: FitnessEvaluation end
 
 """
@@ -74,6 +88,15 @@ function mkffunc(fiteval::DissimFitness)
             simf=simf_traversal_count_root(fiteval.X),
         )
     end
+    return _cost
+end
+
+function mkffunc(fiteval::LikelihoodFitness)
+    function _cost(phenotype)
+        y_dist = output_dist(phenotype, fiteval.X)
+        return sum(logpdf.(y_dist, fiteval.y))
+    end
+
     return _cost
 end
 
@@ -194,6 +217,14 @@ function runga(X::XType, y::YType, config::GARegressor)
             )
         end
         ffunc = mkffunc(DissimFitness(config.dgmodel, X))
+    elseif config.fiteval == :likelihood
+        ffunc = mkffunc(LikelihoodFitness(X, y))
+    else
+        throw(
+            ArgumentError(
+                "$(config.fiteval) is not a supported fitness scheme",
+            ),
+        )
     end
 
     # Initialize.

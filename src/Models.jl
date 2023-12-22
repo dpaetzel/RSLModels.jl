@@ -222,6 +222,22 @@ function AbstractModels.output(
 end
 
 """
+    output_dist(model::Model, X; matching_matrix=match(model, X))
+
+Given inputs `X`, return the output distribution for each.
+"""
+function AbstractModels.output_dist(
+    model::Model,
+    X::AbstractMatrix{Float64};
+    matching_matrix::AbstractMatrix{Bool}=match(model, X),
+)
+    means = output_mean(model, X; matching_matrix=matching_matrix)
+    vars = output_variance(model, X; matching_matrix=matching_matrix)
+
+    return Normal.(means, sqrt.(vars))
+end
+
+"""
     output_mean(model::Model, X; matching_matrix=match(model, X))
 
 Given inputs `X`, return the output distribution's mean for each.
