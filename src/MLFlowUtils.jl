@@ -1,21 +1,41 @@
 module MLFlowUtils
 
+using Base64
 using DataFrames
 using Dates
 using MLFlowClient
 using NPZ
+using TOML
 
 using RSLModels.Intervals
 
 export add_missing_keys!,
     algorithms_inv,
     check,
+    getmlf,
     has_bounds,
     load_runs,
     run_to_dict,
+    runs_to_df,
     runtimes,
-    tryread,
-    runs_to_df
+    tryread
+
+"""
+Get MLflow client using authentication.
+"""
+function getmlf()
+    config = open("config.toml", "r") do file
+        return TOML.parse(read(file, String))
+    end
+
+    mlflow_url = "http://localhost:5000"
+
+    username = config["database"]["user"]
+    password = config["database"]["password"]
+    encoded_credentials = base64encode("$username:$password")
+    headers = Dict("Authorization" => "Basic $encoded_credentials")
+    return MLFlow(mlflow_url; headers=headers)
+end
 
 function killsubprocs(proc)
     # First, record PID of the process and its child processes.
