@@ -1,9 +1,9 @@
-Genotype = AbstractVector{Intervals.Interval}
+const Genotype = AbstractVector{Intervals.Interval}
 
 const XType::DataType = AbstractMatrix{Float64}
 const YType::DataType = AbstractVector{Float64}
 
-draw_genotype = draw_intervals
+const draw_genotype = draw_intervals
 
 unzip(a) = map(x -> getfield.(a, x), fieldnames(eltype(a)))
 
