@@ -305,10 +305,11 @@ function init(ffunc::Function, X, y, config::GARegressor)
                 a=config.init_params_spread_a,
                 b=config.init_params_spread_b,
             ),
-            rate_coverage_min=0.8,
+            rate_coverage_min=config.init_rate_coverage_min,
+            # We always remove fully overlapped rules during initialization.
             remove_final_fully_overlapped=true,
             # TODO Consider to reduce this number for faster initialization
-            # n_samples
+            # n_samples=Parameters.n(dims),
             x_min=config.x_min,
             x_max=config.x_max,
         ) for _ in 1:(config.size_pop)

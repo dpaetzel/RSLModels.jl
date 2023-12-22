@@ -16,9 +16,8 @@ function mutate(rng, g::Genotype, X::XType, config::GARegressor)
     # this might result in an additional copy operation.
     g_ = mutate_bounds(rng, g, config)
 
-    # TODO Expose p_mu_add
     # Add a metavariable.
-    if rand(rng) < 0.05
+    if rand(rng) < config.mutate_p_add
         N, DX = size(X)
         # TODO Consider to enforce matching a configurable number of data points
         # Draw a random data point.
@@ -41,9 +40,8 @@ function mutate(rng, g::Genotype, X::XType, config::GARegressor)
         push!(g_, condition)
     end
 
-    # TODO Expose p_mu_rm
     # Remove a metavariable.
-    if rand(rng) < 0.05
+    if rand(rng) < config.mutate_p_rm
         idx = rand(rng, eachindex(g_))
         deleteat!(g_, idx)
     end
@@ -77,16 +75,21 @@ function mutate_bounds(rng::AbstractRNG, g::Genotype, config::GARegressor)
     # We have `2 * DX` design variables per metavariable (each condition is one
     # metavariable).
     n_dvars = 2 * DX
+    p = config.mutate_rate_mut * 1.0 / (n_dvars * l)
+    std_mut = config.mutate_rate_std * (config.x_max - config.x_min)
 
-    # TODO Expose a factor for this in config
-    p = 1.0 / (n_dvars * l)
+    dist_mask = Bernoulli(p)
+    dist_mut = Normal(0, std_mut .* (config.x_max .- config.x_min))
+
+    # Do this in-place so we do not have to malloc repeatedly. However, this
+    # seems to bring something like 100μs for `l == 1000` and `DX == 10`.
+    mask = Vector{Bool}(undef, DX)
+    mutation = Vector{Float64}(undef, DX)
 
     # TODO Look at efficiency of this combination of loops and rand
-
+    #
     # Go over all metavariables (i.e. all conditions).
     for idx in eachindex(g_)
-        # TODO Expose std_mut parameter
-        # TODO Check whether used std is sensible here
         # Declaratively apply the mutation rate (mask is 1 if the design
         # variable should be mutated and 0 otherwise). Note that we draw too
         # many values from the normal since we only use the ones where `mask !=
@@ -94,15 +97,14 @@ function mutate_bounds(rng::AbstractRNG, g::Genotype, config::GARegressor)
         # number of mutations from a binomial here and then only drawing the
         # necessary alterations (but I suspect that this is slower—it was in
         # Python, anyway).
-        mask = rand(rng, Bernoulli(p), DX)
-        std_mut = 0.05
-        x = rand(rng, Normal(0, std_mut .* (config.x_max .- config.x_min)), DX)
-        g_[idx].lbound[:] = g_[idx].lbound .+ mask .* x
+        rand!(rng, dist_mask, mask)
+        rand!(rng, dist_mut, mutation)
+        g_[idx].lbound[:] = g_[idx].lbound .+ mask .* mutation
         g_[idx].lbound[:] = mirror.(g_[idx].lbound, config.x_min, config.x_max)
 
-        mask = rand(rng, Bernoulli(p), DX)
-        x = rand(rng, Normal(0, std_mut .* (config.x_max .- config.x_min)), DX)
-        g_[idx].ubound[:] = g_[idx].ubound .+ mask .* x
+        rand!(rng, dist_mask, mask)
+        rand!(rng, dist_mut, mutation)
+        g_[idx].ubound[:] = g_[idx].ubound .+ mask .* mutation
         g_[idx].ubound[:] = mirror.(g_[idx].ubound, config.x_min, config.x_max)
     end
 

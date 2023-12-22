@@ -21,38 +21,36 @@ include("mutate.jl")
 
 export GARegressor
 
+function fixparamdomain!(m, symbol, pred, desc)
+    if !pred(getfield(m, symbol))
+        setfield!(m, symbol, params_default[symbol])
+        return "Parameter `$(string(symbol))` expected to be " *
+               "$desc, resetting to $(params_default[symbol])\n"
+    else
+        return ""
+    end
+end
+
+m = GARegressor()
+
 function MMI.clean!(m::GARegressor)
     warning = ""
 
-    # Has to be positive and divisible by 2 (due to pairwise crossover).
-    if !(m.size_pop > 0 && m.size_pop % 2 == 0)
-        warning *=
-            "Parameter `size_pop` expected to be positive and " *
-            "divisible by 2, resetting to $(params_default[:size_pop])"
-        m.size_pop = params_default[:size_pop]
-    end
+    warning *= fixparamdomain!(m, :n_iter, x -> x > 0, "positive")
 
-    if !(m.n_iter > 0)
-        warning *=
-            "Parameter `n_iter` expected to be positive, " *
-            "resetting to $(params_default[:n_iter])"
-        m.n_iter = params_default[:n_iter]
-    end
+    warning *= fixparamdomain!(
+        m,
+        :size_pop,
+        x -> x > 0 && x % 2 == 0,
+        "positive and divisible by 2",
+    )
 
-    if !(0 <= m.recomb_rate <= 1)
-        warning *=
-            "Parameter `recomb_rate` expected to be in [0, 1], " *
-            "resetting to $(params_default[:recomb_rate])"
-        m.recomb_rate = params_default[:recomb_rate]
-    end
-
-    if !(m.fiteval ∈ [:mae, :dissimilarity])
-        warning *=
-            "Parameter `fiteval` expected to be one of " *
-            "{:mae, :dissimilarity}, " *
-            "resetting to $(params_default[:fiteval])"
-        m.fiteval = params_default[:fiteval]
-    end
+    warning *= fixparamdomain!(
+        m,
+        :fiteval,
+        x -> x ∈ [:mae, :dissimilarity],
+        "one of {:mae, :dissimilarity}",
+    )
 
     if m.fiteval == :dissimilarity && !(m.dgmodel isa Models.Model)
         throw(
@@ -63,37 +61,71 @@ function MMI.clean!(m::GARegressor)
         )
     end
 
+    warning *= fixparamdomain!(m, :nmatch_min, x -> x > 0, "positive")
+
     spread_min_max = (m.x_max - m.x_min) / 2
-    if !(0 <= m.init_spread_min <= spread_min_max)
-        warning *=
-            "Parameter `init_spread_min` expected to be in " *
-            "[0, $spread_min_max], " *
-            "resetting to $(params_default[:init_spread_min])"
-        m.init_spread_min = params_default[:init_spread_min]
-    end
+    warning *= fixparamdomain!(
+        m,
+        :init_spread_min,
+        x -> 0 <= x <= spread_min_max,
+        "[0, $spread_min_max]",
+    )
 
-    if !(0 <= m.init_spread_max)
-        warning *=
-            "Parameter `init_spread_max` expected to be in [0, Inf), " *
-            "resetting to $(params_default[:init_spread_max])"
-        m.init_spread_max = params_default[:init_spread_max]
-    end
+    warning *= fixparamdomain!(m, :init_spread_max, x -> x > 0, "in [0, Inf)")
 
-    if !(0 < m.init_params_spread_a)
-        warning *=
-            "Parameter `init_params_spread_a` expected to be in " *
-            "(0, Inf), " *
-            "resetting to $(params_default[:init_params_spread_a])"
-        m.init_params_spread_a = params_default[:init_params_spread_a]
-    end
+    warning *=
+        fixparamdomain!(m, :init_params_spread_a, x -> x > 0, "in (0, Inf)")
 
-    if !(0 < m.init_params_spread_b)
-        warning *=
-            "Parameter `init_params_spread_b` expected to be in " *
-            " (0, Inf), " *
-            "resetting to $(params_default[:init_params_spread_b])"
-        m.init_params_spread_b = params_default[:init_params_spread_b]
-    end
+    warning *=
+        fixparamdomain!(m, :init_params_spread_b, x -> x > 0, "in (0, Inf)")
+
+    warning *= fixparamdomain!(
+        m,
+        :init_rate_coverage_min,
+        x -> 0.0 <= x <= 1.0,
+        "in [0.0, 1.0]",
+    )
+
+    warning *=
+        fixparamdomain!(m, :recomb_rate, x -> 0.0 <= x <= 1.0, "in [0.0, 1.0]")
+
+    warning *= fixparamdomain!(
+        m,
+        :mutate_p_add,
+        x -> 0.0 <= x <= 1.0,
+        "in [0.0, 1.0]",
+    )
+
+    warning *=
+        fixparamdomain!(m, :mutate_p_rm, x -> 0.0 <= x <= 1.0, "in [0.0, 1.0]")
+
+    warning *= fixparamdomain!(
+        m,
+        :mutate_rate_mut,
+        x -> 0.0 <= x <= 1.0,
+        "in [0.0, 1.0]",
+    )
+
+    warning *= fixparamdomain!(
+        m,
+        :mutate_rate_std,
+        x -> 0.0 <= x <= 1.0,
+        "in [0.0, 1.0]",
+    )
+
+    warning *= fixparamdomain!(
+        m,
+        :select_width_window,
+        x -> 1 <= x <= m.size_pop,
+        "in [1, $(m.size_pop)]",
+    )
+
+    warning *= fixparamdomain!(
+        m,
+        :select_lambda_window,
+        x -> 0.0 <= x,
+        "non-negative",
+    )
 
     return warning
 end
