@@ -122,7 +122,7 @@ function mirror(x::Float64, x_min::Float64, x_max::Float64)
     x_ = x_ + (x_ < x_min) * 2 * (x_min - x_)
 
     if x_ > x_max || x_ < x_min
-        return _mirror(x_, x_min, x_max)
+        return mirror(x_, x_min, x_max)
     else
         return x_
     end

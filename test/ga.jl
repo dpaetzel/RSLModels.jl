@@ -146,6 +146,15 @@ let
         end
     end
 
+    @testset "mirror" begin
+        rng = Random.Xoshiro(123)
+
+        a = rand(rng, 100)
+        for i in eachindex(a)
+            @test 0.3 <= GARegressors.mirror(a[i], 0.3, 0.6) <= 0.6
+        end
+    end
+
     @testset "mutate" begin
         rng = Random.Xoshiro(123)
 
