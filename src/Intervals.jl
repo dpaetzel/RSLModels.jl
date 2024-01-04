@@ -1,5 +1,7 @@
 module Intervals
 
+include("Intervals/Parameters.jl")
+
 using AutoHashEquals
 using Distributions
 using LinearAlgebra
@@ -8,7 +10,7 @@ using Mmap
 using Random
 using StatsBase
 
-using RSLModels.Parameters
+import RSLModels.Parameters: n
 
 export Interval,
     dimensions,
@@ -325,7 +327,7 @@ function draw_intervals(
     spread_max::Float64=Inf,
     params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
     rate_coverage_min::Float64=0.8,
-    n_samples::Int=Parameters.n(dims),
+    n_samples::Int=n(dims),
     remove_final_fully_overlapped::Bool=true,
     x_min::Float64=Intervals.X_MIN,
     x_max::Float64=Intervals.X_MAX,
@@ -379,7 +381,7 @@ function draw_intervals(
     spread_max::Float64=Inf,
     params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
     rate_coverage_min::Float64=0.8,
-    n_samples::Int=Parameters.n(dims),
+    n_samples::Int=n(dims),
     remove_final_fully_overlapped::Bool=true,
     x_min::Float64=Intervals.X_MIN,
     x_max::Float64=Intervals.X_MAX,
