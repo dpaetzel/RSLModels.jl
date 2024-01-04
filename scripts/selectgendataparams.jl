@@ -9,9 +9,10 @@ using KittyTerminalImages
 using LaTeXStrings
 using ScientificTypes
 using Statistics
+using StatsBase
 using Tables
 
-Ks_default = [2, 4, 8, 10, 14, 18, 25, 32]
+Ks_default = [2, 4, 8, 12, 18, 24, 32]
 
 function readdata(fname; dropcensored=true, collapsemedian=false)
     # TODO Lock this header with genkdata.jl
@@ -125,70 +126,28 @@ function selectparams(fname, Ks; fname_sel=fname_sel_default(fname))
     )
     println()
 
-    # For the smallest `rate_coverage_min`, plot distributions over `a`, `b` and
-    # `spread_min`.
-    plt_hist =
-        data(
-            df_sel,
-            # df_sel[
-            #     df_sel.rate_coverage_min .== first(sort(df.rate_coverage_min)),
-            #     :,
-            # ],
-        ) *
-        mapping(;
-            col=:DX => nonnumeric,
-            row=:K => nonnumeric,
-            color=:rate_coverage_min => nonnumeric,
-        ) *
-        AlgebraOfGraphics.density()
-    display(
-        draw(
-            plt_hist * mapping(:a);
-            facet=(; linkyaxes=:none),
-            figure=(; resolution=(1100, 1000)),
-        ),
-    )
-    println()
-    display(
-        draw(
-            plt_hist * mapping(:b);
-            facet=(; linkyaxes=:none),
-            figure=(; resolution=(1100, 1000)),
-        ),
-    )
-    println()
-    display(
-        draw(
-            plt_hist * mapping(:spread_min);
-            facet=(; linkyaxes=:none),
-            figure=(; resolution=(1100, 1000)),
-        ),
-    )
-    println()
-
-    error("This disregards the fact that the parameters are not independent")
-    # We need to estimate their joint distribution!
     df_sel_mean = combine(
         groupby(df_sel, [:DX, :rate_coverage_min, :K]),
         nrow => :count,
         [:spread_min, :a, :b] =>
-            (
-                (s, a, b) -> (
-                    spread_min_mean=mean(s),
-                    a_mean=mean(a),
-                    b_mean=mean(b),
-                )
-            ) => AsTable,
+            ((s, a, b) -> histmode((; spread_min=s, a=a, b=b))) => AsTable,
     )
     df_sel_mean = sort(df_sel_mean)
 
-    df_sel_mean[!, :Beta] = Beta.(df_sel_mean.a_mean, df_sel_mean.b_mean)
+    # NEXT compute beta distribution stats like above (mean etc.)
+
+    df_sel_mean[!, :Beta] = Beta.(df_sel_mean.a, df_sel_mean.b)
 
     df_sel_mean[!, :Beta_mean] = mean.(df_sel_mean.Beta)
 
     df_sel_mean[!, :Beta_var] = var.(df_sel_mean.Beta)
 
     df_sel_mean[!, :Beta_std] = std.(df_sel_mean.Beta)
+
+    # This is simply the formula from `Intervals.draw_spread`.
+    df_sel_mean[!, :spread_mean] =
+        df_sel_mean.spread_min .+
+        mean.(df_sel_mean.Beta) .* (0.5 .- df_sel_mean.spread_min)
 
     display(
         draw(
@@ -199,23 +158,66 @@ function selectparams(fname, Ks; fname_sel=fname_sel_default(fname))
                 color=:rate_coverage_min => nonnumeric,
             ) *
             (
-                mapping(:K, :Beta_mean) * visual(ScatterLines) +
-                mapping(:K, :Beta_mean, :Beta_std) * visual(Errorbars)
+                mapping(:K, :spread_mean) * visual(ScatterLines) +
+                mapping(:K, :spread_mean, :Beta_std) * visual(Errorbars)
             ),
         ),
     )
     println()
 
-    df_sel_mean = rename(
-        df_sel_mean,
-        :a_mean => :a,
-        :b_mean => :b,
-        :spread_min_mean => :spread_min,
-    )
-
     CSV.write(fname_sel, df_sel_mean)
 
     return nothing
+end
+
+function histmode(data::NamedTuple; nbins=Int(ceil(length(data[1])^(1 / 3))))
+    matrix = hcat(data...)
+    out, n_maxbin = histmode(matrix; nbins=nbins)
+    return NamedTuple(vcat(keys(data) .=> out, :n_maxbin => n_maxbin))
+end
+
+# TODO Number of bins is probably suboptimal
+function histmode(
+    matrix::AbstractMatrix{Float64};
+    nbins=Int(ceil(size(matrix, 1)^(1 / 3))),
+)
+    @info "Using $nbins bins per dimension."
+
+    # TODO Consider whether Matrix/Tuple data transformations can be done better
+    hst = fit(Histogram, Tuple([col for col in eachcol(matrix)]); nbins=nbins)
+
+    # For sanity checking.
+    n_maxbin = maximum(hst.weights)
+
+    # Get the `CartesianIndex` of the bin with the most data points.
+    idx_maxbin = argmax(hst.weights)
+
+    # TODO Consider whether Matrix/Tuple data transformations can be done better
+    # Get bin index for each data point. Transform matrix rows to tuples (since
+    # `binindex` only accepts tuples).
+    idxs =
+        CartesianIndex.(
+            StatsBase.binindex.(
+                Ref(hst),
+                [Tuple(row) for row in eachrow(matrix)],
+            )
+        )
+
+    # Check which data points are in the highest density bin.
+    idxs_max = idxs .== Ref(idx_maxbin)
+
+    # Sanity check.
+    @assert count(idxs_max) == n_maxbin
+
+    # Extract data points using Bool indexing on the matrixified form of the
+    # data.
+    dfmax = matrix[idxs_max, :]
+
+    @info "Estimating mode from mean of max bin containing " *
+          "$n_maxbin of $(size(matrix, 1)) data points."
+
+    # Compute mean.
+    return mean.(eachcol(dfmax)), n_maxbin
 end
 
 """
