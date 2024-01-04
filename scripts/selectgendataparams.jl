@@ -14,21 +14,32 @@ using Tables
 Ks_default = [2, 4, 8, 10, 14, 18, 25, 32]
 
 function readdata(fname; dropcensored=true, collapsemedian=false)
-    df = DataFrame(
-        CSV.File(
-            fname;
-            # TODO Lock this header with genkdata.jl
-            header=[
-                :DX,
-                :rate_coverage_min,
-                :spread_min,
-                :a,
-                :b,
-                :rate_coverage,
-                :K,
-            ],
-        ),
-    )
+    # TODO Lock this header with genkdata.jl
+    csv_header =
+        [:DX, :rate_coverage_min, :spread_min, :a, :b, :rate_coverage, :K]
+
+    df = if isfile(fname)
+        # Read the file into a DataFrame
+        out = DataFrame(CSV.File(fname; header=csv_header))
+        @info "Loaded CSV file $fname."
+        out
+    elseif isdir(fname)
+        combined_df = DataFrame()
+
+        fnames = readdir(fname)
+        for f in fnames
+            fpath = joinpath(fname, f)
+            if isfile(fpath) && endswith(fpath, ".csv")
+                df = DataFrame(CSV.File(fpath; header=csv_header))
+                combined_df = vcat(combined_df, df)
+            end
+        end
+
+        @info "Loaded $(length(fnames)) CSV files from directory $fname."
+        combined_df
+    else
+        error("Provided path is neither a file nor a directory")
+    end
 
     # When generating the data for this, we cancel trials at some number of
     # rules to not waste time with configurations that we're not interested in.
@@ -57,7 +68,15 @@ function readdata(fname; dropcensored=true, collapsemedian=false)
     return df
 end
 
-fname_sel_default(fname) = replace(fname, r".csv$" => ".paramselect.csv")
+function fname_sel_default(fname)
+    return if isfile(fname)
+        replace(fname, r".csv$" => ".paramselect.csv")
+    elseif isdir(fname)
+        replace(fname * ".paramselect.csv")
+    else
+        "paramselect.csv"
+    end
+end
 
 function selectparams(fname, Ks; fname_sel=fname_sel_default(fname))
     set_theme!()
