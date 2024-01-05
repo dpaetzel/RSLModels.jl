@@ -21,8 +21,8 @@ function mysample1(;
     spread_min = rand() / 2
 
     # TODO Consider to invest time in choosing sensible ranges here
-    a = rand() * 99 + 1
-    b = rand() * 99 + 1
+    a = rand() * 199 + 1
+    b = rand() * 199 + 1
 
     rates_coverage = Vector{Float64}(undef, n_samples)
     Ks = Vector{Int}(undef, n_samples)
