@@ -5,6 +5,7 @@ using Mmap
 using Serialization
 using Statistics
 
+using RSLModels.AbstractModels
 using RSLModels.LocalModels
 using RSLModels.Tasks
 using RSLModels.Utils

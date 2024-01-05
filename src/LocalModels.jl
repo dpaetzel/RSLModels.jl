@@ -71,16 +71,30 @@ function draw_constantmodel(rng::AbstractRNG; isdefault::Bool=false)
 end
 
 """
-    output([rng::AbstractRNG], model::ConstantModel)
+    output([rng::AbstractRNG], model::ConstantModel[, X::Float64])
 
-Since constant models' outputs are independent of inputs `X`, we can define an
-`X`-less form.
+Since constant models' outputs are independent of inputs `X`, providing an input
+`X` is optional (providing it doesn't do anything and is only allowed to allow
+for a unified interface).
 """
 function AbstractModels.output(model::ConstantModel)
     return AbstractModels.output(Random.default_rng(), model)
 end
 
 function AbstractModels.output(rng::AbstractRNG, model::ConstantModel)
+    # Note that outputs of constant models do not depend on inputs.
+    return rand(rng, model.dist_out)
+end
+
+function AbstractModels.output(model::ConstantModel, X::Float64)
+    return AbstractModels.output(Random.default_rng(), model)
+end
+
+function AbstractModels.output(
+    rng::AbstractRNG,
+    model::ConstantModel,
+    X::Float64,
+)
     # Note that outputs of constant models do not depend on inputs.
     return rand(rng, model.dist_out)
 end
