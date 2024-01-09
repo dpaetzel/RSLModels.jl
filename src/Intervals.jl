@@ -125,7 +125,7 @@ end
 In-place version of `elemof`, useful if the output has to be pre-allocated.
 """
 function elemof!(
-    out::Vector{Bool},
+    out::AbstractVector{Bool},
     X::AbstractMatrix{Float64},
     interval::Interval,
 )
@@ -321,8 +321,34 @@ function draw_interval(
     return Interval(center - spread, center + spread)
 end
 
+"""
+    draw_intervals([rng,] dims; <keyword arguments>)
+
+Generate random intervals for `dims` dimensions. Stop adding intervals as soon
+as a rate of `rate_coverage_min` of a uniformly distributed sample from the
+space ``[x_min, x_max]^\text{dims}`` is covered or the maximum number of
+intervals is reached.
+
+If no `rng` is provided, use the `Random.default_rng()`.
+
+# Arguments
+- `rng::AbstractRNG`:
+- `dims::Int`:
+- `spread_min::Float64`:
+- `spread_max::Float64`:
+- `params_spread::Tuple{Float64, Float64}`: a and b parameters for the beta
+  distribution.
+- `rate_coverage_min::Float64`: [0, 1].
+- `n_samples`: Only if `X` is not given. Size of the uniformly distributed
+  sample from the input space to generate.
+- `remove_final_fully_overlapped`:
+- `x_min::Float64`:
+- `x_max::Float64`:
+"""
+function draw_intervals end
+
 function draw_intervals(
-    dims::Integer;
+    dims::Int64;
     spread_min::Float64=0.0,
     spread_max::Float64=Inf,
     params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
@@ -332,7 +358,7 @@ function draw_intervals(
     x_min::Float64=Intervals.X_MIN,
     x_max::Float64=Intervals.X_MAX,
     usemmap::Bool=false,
-    n_intervals_max::Union{Int,Nothing}=nothing,
+    n_intervals_max::Int64=1000,
     return_coverage_rate::Bool=false,
     verbose::Int=0,
 )
@@ -354,29 +380,9 @@ function draw_intervals(
     )
 end
 
-"""
-    draw_intervals([rng,] dims; <keyword arguments>)
-
-Generate random intervals for `dim` dimensions.
-
- If no `rng` is provided, use the
-`Random.default_rng()`.
-
-# Arguments
-- `rng::AbstractRNG`:
-- `dims::Int`:
-- `spread_min::Float64`:
-- `spread_max::Float64`:
-- `params_spread::Tuple{Float64, Float64}`: a and b parameters for the beta distribution.
-- `rate_coverage_min::Float64`: [0, 1].
-- `n_samples`:
-- `remove_final_fully_overlapped`:
-- `x_min::Float64`:
-- `x_max::Float64`:
-"""
 function draw_intervals(
     rng::AbstractRNG,
-    dims::Int;
+    dims::Int64;
     spread_min::Float64=0.0,
     spread_max::Float64=Inf,
     params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
@@ -386,37 +392,113 @@ function draw_intervals(
     x_min::Float64=Intervals.X_MIN,
     x_max::Float64=Intervals.X_MAX,
     usemmap::Bool=false,
-    n_intervals_max::Union{Int,Nothing}=nothing,
+    n_intervals_max::Int64=1000,
     return_coverage_rate::Bool=false,
     verbose::Int=0,
 )
-    X::Matrix{Float64}, m::Vector{Bool} = if usemmap
+    X::Matrix{Float64} = if usemmap
         (path_X, io_X) = mktemp(tempdir())
         X = mmap(io_X, Matrix{Float64}, (n_samples, dims))
         for i in eachindex(X)
             X[i] = rand(rng) * (x_max - x_min)
         end
-
-        (path_m, io_m) = mktemp(tempdir())
-        m = mmap(io_m, Vector{Bool}, n_samples)
-        X, m
+        # TODO Consider to reenable mmapping more than just X but consider the
+        # difficulties
+        X
     else
         X = rand(rng, n_samples, dims) .* (x_max - x_min)
-        m = Vector{Bool}(undef, n_samples)
-        X, m
+        X
     end
 
-    # Note that `M` this is a vector of a few hundred vectors at most and we
-    # thus do not preallocate this (which would be slightly awkward due to the
-    # dynamic nature of `M`).
-    M = Vector{Bool}[]
+    out = draw_intervals(
+        rng,
+        X;
+        spread_min=spread_min,
+        spread_max=spread_max,
+        params_spread=params_spread,
+        rate_coverage_min=rate_coverage_min,
+        remove_final_fully_overlapped=remove_final_fully_overlapped,
+        x_min=x_min,
+        x_max=x_max,
+        n_intervals_max=n_intervals_max,
+        return_coverage_rate=return_coverage_rate,
+        verbose=verbose,
+    )
+
+    # Not 100% sure whether this reassignment is necessary.
+    # X = [0.0 0.0]
+    # m = [0.0]
+    if usemmap
+        # TODO Consider to use a finalizer here to be sure
+        close(io_X)
+        rm(path_X)
+        # close(io_m)
+        # rm(path_m)
+    end
+
+    return out
+end
+
+"""
+    draw_intervals([rng,] X; <keyword arguments>)
+
+Generate random intervals for such that the data points in `X` are sufficiently
+covered. I.e. provide a sample to be covered with a rate of `rate_coverage_min`
+instead of generating a sample from some space like the `dims` form of
+`draw_intervals` does.
+"""
+function draw_intervals(
+    X::Matrix{Float64};
+    spread_min::Float64=0.0,
+    spread_max::Float64=Inf,
+    params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
+    rate_coverage_min::Float64=0.8,
+    remove_final_fully_overlapped::Bool=true,
+    x_min::Float64=Intervals.X_MIN,
+    x_max::Float64=Intervals.X_MAX,
+    n_intervals_max::Int=1000,
+    return_coverage_rate::Bool=false,
+    verbose::Int=0,
+)
+    return draw_intervals(
+        Random.default_rng(),
+        X;
+        spread_min=spread_min,
+        spread_max=spread_max,
+        params_spread=params_spread,
+        rate_coverage_min=rate_coverage_min,
+        remove_final_fully_overlapped=remove_final_fully_overlapped,
+        x_min=x_min,
+        x_max=x_max,
+        n_intervals_max=n_intervals_max,
+        return_coverage_rate=return_coverage_rate,
+        verbose=verbose,
+    )
+end
+
+function draw_intervals(
+    rng::AbstractRNG,
+    X::Matrix{Float64};
+    spread_min::Float64=0.0,
+    spread_max::Float64=Inf,
+    params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
+    rate_coverage_min::Float64=0.8,
+    remove_final_fully_overlapped::Bool=true,
+    x_min::Float64=Intervals.X_MIN,
+    x_max::Float64=Intervals.X_MAX,
+    n_intervals_max::Int=1000,
+    return_coverage_rate::Bool=false,
+    verbose::Int=0,
+)
+    n_samples, DX = size(X)
+    M = Matrix{Bool}(undef, n_samples, n_intervals_max)
     matched = fill(false, n_samples)
     intervals::Vector{Interval} = Interval[]
 
     rate_coverage = 0.0
 
     while rate_coverage < rate_coverage_min &&
-        (n_intervals_max == nothing || length(intervals) < n_intervals_max)
+        length(intervals) < n_intervals_max
         @debug "Current coverage: $(round(rate_coverage; digits=2)) " *
                "of required $rate_coverage_min"
 
@@ -439,43 +521,42 @@ function draw_intervals(
             x_max=x_max,
         )
 
-        elemof!(m, X, interval)
+        # Compute the matching vector and store it in the next column of `M`.
+        elemof!(view(M, :, length(intervals) + 1), X, interval)
 
         # If the just-created interval is fully covered by the other intervals
         # (at least as measured by looking at `X`), then do retry.
         #
         # Note that the predicate corresponds to `!any(m .&& .!matched)` but we
         # try not to compute stuff twice.
-        matched_new = m .|| matched
+        matched_new = view(M, :, length(intervals) + 1) .|| matched
         if all(matched_new .== matched)
             continue
         else
             push!(intervals, interval)
-            push!(M, m)
-            matched = matched_new
+            matched .= matched_new
             rate_coverage = count(matched) / n_samples
         end
     end
+
+    # Keep only the columns of M that were actually used.
+    M_ = view(M, :, 1:length(intervals))
 
     intervals_final = if remove_final_fully_overlapped
         if verbose >= 10
             println("Removing fully overlapped intervals …")
         end
-        # Note that we have to `hcat` `M` because it is a vector of vectors.
-        remove_fully_overlapped(intervals, X; matching_matrix=reduce(hcat, M))
+        # Note that we have to `hcat` `M_` because it is a vector of vectors.
+        remove_fully_overlapped(intervals, X; matching_matrix=M_)
     else
         intervals
     end
 
-    # Not 100% sure whether this reassignment is necessary.
-    # X = [0.0 0.0]
-    # m = [0.0]
-    if usemmap
-        # TODO Consider to use a finalizer here to be sure
-        close(io_X)
-        rm(path_X)
-        close(io_m)
-        rm(path_m)
+    if rate_coverage < rate_coverage_min
+        @warn "draw_intervals: Maximum number of intervals " *
+              "($n_intervals_max) exhausted and still " *
+              "only covering $rate_coverage instead of the required " *
+              "$rate_coverage_min" maxlog = 10
     end
 
     if return_coverage_rate
