@@ -7,7 +7,7 @@ using ProgressMeter
 using RSLModels.Intervals
 using RSLModels.Utils
 
-DXs_default::Vector{Int} = [2, 3, 5, 8, 10, 13]
+DXs_default::Vector{Int} = [2, 3, 5, 8, 12]
 rates_coverage_min::Vector{Float64} = [0.75, 0.9]
 
 """
@@ -88,11 +88,14 @@ process.
         @async begin
             # Note that we have to add a `@sync` here since otherwise the
             # `false` is written to the channel first.
-            @sync @distributed for i in 1:n_iter
-                out = mysample1(;
-                    DXs=DXs,
-                    rates_coverage_min=rates_coverage_min,
+            @sync @distributed for (i, DX, rate_coverage_min) in collect(
+                Iterators.product(1:n_iter, DXs, rates_coverage_min),
+            )
+                out = mysample1(
+                    DX,
+                    rate_coverage_min;
                     usemmap=usemmap,
+                    n_intervals_max=100,
                 )
 
                 # Trigger process bar update and result fetching.

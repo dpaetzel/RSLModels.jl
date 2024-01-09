@@ -4,17 +4,7 @@ using Distributions
 
 using RSLModels.Intervals
 
-DXs = [2, 3, 5, 8, 10, 13]
-rates_coverage_min = [0.75, 0.9]
-
-function mysample1(;
-    DXs=DXs,
-    rates_coverage_min=rates_coverage_min,
-    usemmap=false,
-)
-    DX = rand(DXs)
-    rate_coverage_min = rand(rates_coverage_min)
-
+function mysample1(DX, rate_coverage_min; usemmap=false, n_intervals_max=100)
     # TODO Consider to use a slightly informed distribution for `spread_min`.
     # spread_min = hist(rand(Beta(2, 2), 10000) / 2; bins=30)
     spread_min = rand() / 2
@@ -29,7 +19,7 @@ function mysample1(;
         params_spread=(a=a, b=b),
         spread_min=spread_min,
         usemmap=usemmap,
-        n_intervals_max=50,
+        n_intervals_max=n_intervals_max,
         return_coverage_rate=true,
         # verbose=10,
     )
