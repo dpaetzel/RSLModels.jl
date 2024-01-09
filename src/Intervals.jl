@@ -399,9 +399,11 @@ function draw_intervals(
     X::Matrix{Float64} = if usemmap
         (path_X, io_X) = mktemp(tempdir())
         X = mmap(io_X, Matrix{Float64}, (n_samples, dims))
-        for i in eachindex(X)
-            X[i] = rand(rng) * (x_max - x_min)
-        end
+        # Note that we use in-place `rand!` here not only for performance
+        # reasons but also because this means that the RNG is in the same state
+        # after initializing `X` independent of whether we memory-map or not.
+        rand!(rng, X)
+        X .= X .* (x_max - x_min)
         # TODO Consider to reenable mmapping more than just X but consider the
         # difficulties
         X
@@ -427,13 +429,10 @@ function draw_intervals(
 
     # Not 100% sure whether this reassignment is necessary.
     # X = [0.0 0.0]
-    # m = [0.0]
     if usemmap
         # TODO Consider to use a finalizer here to be sure
         close(io_X)
         rm(path_X)
-        # close(io_m)
-        # rm(path_m)
     end
 
     return out

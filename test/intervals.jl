@@ -86,3 +86,8 @@ count_match = count(any(elemof(X, intervals); dims=2))
 count_match2 =
     count(any(elemof(X, remove_fully_overlapped(intervals, X)); dims=2))
 @test count_match == count_match2
+
+# Ensure that usemmap does not change the result.
+intervals1 = draw_intervals(Random.Xoshiro(1), dim)
+intervals2 = draw_intervals(Random.Xoshiro(1), dim; usemmap=true)
+@test all(intervals1 .== intervals2)
