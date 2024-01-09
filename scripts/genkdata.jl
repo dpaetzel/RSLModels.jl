@@ -23,15 +23,12 @@ process.
 # Options
 
 - `--n-iter`: Number of times to sample.
-- `--n-samples`: Number of samples to draw each time (to later be able to
-  estimate distribution statistics such as mean).
 - `--usemmap`: Whether to memory-map large arrays (X, y, matching matrices, …)
   to disk and save RAM that way.
 """
 @main function mysample(
     DXs::Int...;
     n_iter::Int=100,
-    n_samples::Int=21,
     usemmap::Bool=false,
     rates_coverage_min=rates_coverage_min,
 )
@@ -65,21 +62,19 @@ process.
         @async while take!(channel)
             (i, out) = take!(channel_out)
 
-            for (rate_coverage, K) in zip(out[:rates_coverage], out[:Ks])
-                line = join(
-                    [
-                        out[:DX],
-                        out[:rate_coverage_min],
-                        out[:spread_min],
-                        out[:a],
-                        out[:b],
-                        rate_coverage,
-                        K,
-                    ],
-                    ",",
-                )
-                println(fhandle, line)
-            end
+            line = join(
+                [
+                    out[:DX],
+                    out[:rate_coverage_min],
+                    out[:spread_min],
+                    out[:a],
+                    out[:b],
+                    out[:rate_coverage],
+                    out[:K],
+                ],
+                ",",
+            )
+            println(fhandle, line)
 
             # Flush the file every 5th time or so.
             if rand() < 0.2
@@ -95,7 +90,6 @@ process.
             # `false` is written to the channel first.
             @sync @distributed for i in 1:n_iter
                 out = mysample1(;
-                    n_samples=n_samples,
                     DXs=DXs,
                     rates_coverage_min=rates_coverage_min,
                     usemmap=usemmap,

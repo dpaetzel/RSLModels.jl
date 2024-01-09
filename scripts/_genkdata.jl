@@ -8,7 +8,6 @@ DXs = [2, 3, 5, 8, 10, 13]
 rates_coverage_min = [0.75, 0.9]
 
 function mysample1(;
-    n_samples=21,
     DXs=DXs,
     rates_coverage_min=rates_coverage_min,
     usemmap=false,
@@ -24,23 +23,18 @@ function mysample1(;
     a = rand() * 199 + 1
     b = rand() * 199 + 1
 
-    rates_coverage = Vector{Float64}(undef, n_samples)
-    Ks = Vector{Int}(undef, n_samples)
+    rate_coverage, intervals = draw_intervals(
+        DX;
+        rate_coverage_min=rate_coverage_min,
+        params_spread=(a=a, b=b),
+        spread_min=spread_min,
+        usemmap=usemmap,
+        n_intervals_max=50,
+        return_coverage_rate=true,
+        # verbose=10,
+    )
 
-    for i in 1:n_samples
-        rates_coverage[i], intervals = draw_intervals(
-            DX;
-            rate_coverage_min=rate_coverage_min,
-            params_spread=(a=a, b=b),
-            spread_min=spread_min,
-            usemmap=usemmap,
-            n_intervals_max=50,
-            return_coverage_rate=true,
-            # verbose=10,
-        )
-
-        Ks[i] = length(intervals)
-    end
+    K = length(intervals)
 
     return Dict(
         :DX => DX,
@@ -48,7 +42,7 @@ function mysample1(;
         :spread_min => spread_min,
         :a => a,
         :b => b,
-        :rates_coverage => rates_coverage,
-        :Ks => Ks,
+        :rate_coverage => rate_coverage,
+        :K => K,
     )
 end
