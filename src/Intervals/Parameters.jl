@@ -144,7 +144,16 @@ files to be merged.
 - `K`: Target numbers of conditions to be generate with the selected parameters.
 """
 function selectparams(fname, K...)
+    # TODO Cache the result as a jls file based on a hash of the result of
+    # readdata and K
     df = readdata(fname)
+
+    K_problem = filter(K_ -> K_ ∉ df.K, K)
+    if !isempty(K_problem)
+        @warn "Requested K ∈ $K_problem not in data, not attempting to " *
+              "select parameters for it"
+        K = filter(K_ -> K_ ∉ K_problem, K)
+    end
 
     # Select the observations from the sample that are of interest (i.e. the
     # ones that fulfill our `K` condition).

@@ -8,6 +8,10 @@ mutable struct GARegressor <: MMI.Probabilistic
     x_max::Float64
     nmatch_min::Int
     # Initialization parameters.
+    init::Symbol
+    init_sample_fname::String
+    init_length_min::Int
+    init_length_max::Int
     init_spread_min::Float64
     init_spread_max::Float64
     init_params_spread_a::Float64
@@ -35,6 +39,10 @@ params_default = Dict(
     :x_max => Intervals.X_MAX,
     :nmatch_min => 2,
     # Initialization parameters.
+    :init => :inverse,
+    :init_sample_fname => "kdata",
+    :init_length_min => 1,
+    :init_length_max => 30,
     :init_spread_min => 0.0,
     :init_spread_max => Inf,
     :init_params_spread_a => 1.0,
@@ -62,6 +70,10 @@ function GARegressor(;
     x_max=params_default[:x_max],
     nmatch_min=params_default[:nmatch_min],
     # Initialization parameters.
+    init=params_default[:init],
+    init_sample_fname=params_default[:init_sample_fname],
+    init_length_min=params_default[:init_length_min],
+    init_length_max=params_default[:init_length_max],
     init_spread_min=params_default[:init_spread_min],
     init_spread_max=params_default[:init_spread_max],
     init_params_spread_a=params_default[:init_params_spread_a],
@@ -88,6 +100,10 @@ function GARegressor(;
         x_max,
         nmatch_min,
         # Initialization parameters.
+        init,
+        init_sample_fname,
+        init_length_min,
+        init_length_max,
         init_spread_min,
         init_spread_max,
         init_params_spread_a,
@@ -114,6 +130,26 @@ end
 
 # Arguments
 
+- `init::Symbol=$(params_default[:init])`: Which initialization method to use.
+  `:inverse` means based on heuristically maximizing the density of the
+  initialization parameters and requires a sample of a certain joint
+  distribution (see `RSLModels.Intervals.Parameters.selectparams`). This means
+  that `init_length*` and `init_length*` are used whereas `init_spread*`,
+  `init_params*` and `init_rate*` are ignored (they are set internally based on
+  the sample). `:custom` means that the parameters are used as given by
+  `init_spread*`, `init_params*` and `init_rate*` whereas `init_length*` are
+  ignored. You should probably use `:inverse` unless you know what you're doing.
+- `init_sample_fname::String=$(params_default[:init_sample_fname])`: If
+  `init=:inverse` then this specifies the CSV file (or the folder of CSV files,
+  see `RSLModels.Intervals.Parameters.selectparams`) that contains the joint
+  distribution sample to use. See `init`.
+- `init_length_min::Int=$(params_default[:init_length_min])`: Shortest solution
+  length to use during random initialization. Note that due to the probabilistic
+  nature of initialization and the way that the remaining initialization
+  parameters are derived from this value, you cannot be certain that solutions
+  of this length are actually generated during initialization.
+- `init_length_max::Int=$(params_default[:init_length_max])`: Shortest solution
+  length to use during random initialization. See `init_length_min`.
 - `nmatch_min::Int=$(params_default[:nmatch_min])`: Minimum number of training
   data points to be matched by any rule so that the rule is considered during
   training/prediction. The repair operator applied on all individuals deletes

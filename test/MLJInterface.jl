@@ -22,6 +22,10 @@ let
 
         let config = deepcopy(config)
             config.rng = rng
+            # `:inverse` init is hard to do right now because test somehow
+            # messes up paths and we can thus not properly set the
+            # `init_sample_fname`.
+            config.init = :custom
 
             Logging.with_logger(SimpleLogger(Logging.Warn)) do
                 mach = machine(config, X, y)
@@ -38,6 +42,10 @@ let
 
         let config = deepcopy(config)
             config.rng = rng
+            # `:inverse` init is hard to do right now because test somehow
+            # messes up paths and we can thus not properly set the
+            # `init_sample_fname`.
+            config.init = :custom
 
             # Logging.with_logger(SimpleLogger(Logging.Warn)) do
                 #! format: off

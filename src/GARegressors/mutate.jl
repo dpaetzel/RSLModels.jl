@@ -10,6 +10,7 @@ function mutate(rng, g::EvaluatedGenotype, X::XType, config::GARegressor)
     return mutate(rng, g.genotype, X, config)
 end
 
+# TODO Unravel config
 function mutate(rng, g::Genotype, X::XType, config::GARegressor)
     # TODO Consider whether to add/rm first (so we don't waste bound mutation on
     # conditions that are removed a few lines later anyway). Note, however, that
@@ -27,6 +28,7 @@ function mutate(rng, g::Genotype, X::XType, config::GARegressor)
         condition = draw_interval(
             rng,
             x;
+            # TODO Use init() here
             spread_min=config.init_spread_min,
             spread_max=config.init_spread_max,
             params_spread=(

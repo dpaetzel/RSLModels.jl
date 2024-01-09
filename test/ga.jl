@@ -1,4 +1,5 @@
 using Infiltrator
+using DataFrames
 using MLJ
 using RSLModels.GARegressors
 using RSLModels.Models
@@ -20,13 +21,52 @@ let
     )
     model = draw_model(DX)
 
-    @testset "init: Correct population size" begin
+    @testset "init" begin
         rng = Random.Xoshiro(123)
         for size_pop in 2:2:32
             let config = deepcopy(config)
                 config.size_pop = size_pop
                 config.rng = rng
-                pop, _ = GARegressors.init(ffunc, X, y, config)
+                pop, _ = GARegressors.init_custom(
+                    rng,
+                    ffunc,
+                    X,
+                    config.size_pop,
+                    config.x_min,
+                    config.x_max,
+                    config.init_spread_min,
+                    config.init_spread_max,
+                    config.init_params_spread_a,
+                    config.init_params_spread_b,
+                    config.init_rate_coverage_min,
+                )
+                @test length(pop) == config.size_pop
+            end
+
+            let config = deepcopy(config)
+                config.size_pop = size_pop
+                config.rng = rng
+                # `:inverse` init is hard to do here right now because test
+                # somehow messes up paths and we can thus not properly set the
+                # `init_sample_fname`. We thus build a minimal `DataFrame`
+                # manually.
+                df = DataFrame(;
+                    DX=[DX, DX, DX],
+                    K=[5, 10, 13],
+                    a=[10.0, 20.0, 30.0],
+                    b=[23.0, 22.0, 40.0],
+                    spread_min=[0.2, 0.3, 0.4],
+                    rate_coverage_min=[0.8, 0.8, 0.8],
+                )
+                pop, _ = GARegressors.init_inverse(
+                    rng,
+                    ffunc,
+                    X,
+                    config.size_pop,
+                    config.x_min,
+                    config.x_max,
+                    df,
+                )
                 @test length(pop) == config.size_pop
             end
         end
@@ -85,7 +125,22 @@ let
 
         let config = deepcopy(config)
             config.rng = rng
-            pop, _ = GARegressors.init(ffunc, X, y, config)
+            # `:inverse` init is hard to do here right now because test somehow
+            # messes up paths and we can thus not properly set the
+            # `init_sample_fname`.
+            pop, _ = GARegressors.init_custom(
+                rng,
+                ffunc,
+                X,
+                config.size_pop,
+                config.x_min,
+                config.x_max,
+                config.init_spread_min,
+                config.init_spread_max,
+                config.init_params_spread_a,
+                config.init_params_spread_b,
+                config.init_rate_coverage_min,
+            )
             pop =
                 GARegressors.evaluate.(
                     pop,
@@ -124,7 +179,22 @@ let
 
         let config = deepcopy(config)
             config.rng = rng
-            pop, _ = GARegressors.init(ffunc, X, y, config)
+            # `:inverse` init is hard to do here right now because test somehow
+            # messes up paths and we can thus not properly set the
+            # `init_sample_fname`.
+            pop, _ = GARegressors.init_custom(
+                rng,
+                ffunc,
+                X,
+                config.size_pop,
+                config.x_min,
+                config.x_max,
+                config.init_spread_min,
+                config.init_spread_max,
+                config.init_params_spread_a,
+                config.init_params_spread_b,
+                config.init_rate_coverage_min,
+            )
 
             for g in pop
                 g_ = GARegressors.mutate_bounds(rng, g, config)
@@ -162,7 +232,22 @@ let
 
         let config = deepcopy(config)
             config.rng = rng
-            pop, _ = GARegressors.init(ffunc, X, y, config)
+            # `:inverse` init is hard to do here right now because test somehow
+            # messes up paths and we can thus not properly set the
+            # `init_sample_fname`.
+            pop, _ = GARegressors.init_custom(
+                rng,
+                ffunc,
+                X,
+                config.size_pop,
+                config.x_min,
+                config.x_max,
+                config.init_spread_min,
+                config.init_spread_max,
+                config.init_params_spread_a,
+                config.init_params_spread_b,
+                config.init_rate_coverage_min,
+            )
 
             for g in pop
                 g_, _ = GARegressors.mutate(rng, g, X, config)
@@ -178,7 +263,22 @@ let
 
         let config = deepcopy(config)
             config.rng = rng
-            pop, _ = GARegressors.init(ffunc, X, y, config)
+            # `:inverse` init is hard to do here right now because test somehow
+            # messes up paths and we can thus not properly set the
+            # `init_sample_fname`.
+            pop, _ = GARegressors.init_custom(
+                rng,
+                ffunc,
+                X,
+                config.size_pop,
+                config.x_min,
+                config.x_max,
+                config.init_spread_min,
+                config.init_spread_max,
+                config.init_params_spread_a,
+                config.init_params_spread_b,
+                config.init_rate_coverage_min,
+            )
 
             for g in pop
                 model = GARegressors.express(
@@ -203,6 +303,10 @@ let
                 config.rng = rng
                 config.fiteval = fiteval
                 config.dgmodel = model
+                # `:inverse` init is hard to do here right now because test
+                # somehow messes up paths and we can thus not properly set the
+                # `init_sample_fname`.
+                config.init = :custom
 
                 garesult, report = GARegressors.runga(X, y, config)
 
@@ -217,6 +321,10 @@ let
 
         let config = deepcopy(config)
             config.rng = rng
+            # `:inverse` init is hard to do here right now because test
+            # somehow messes up paths and we can thus not properly set the
+            # `init_sample_fname`.
+            config.init = :custom
 
             for nmatch_min in [2, 5]
                 config.nmatch_min = nmatch_min

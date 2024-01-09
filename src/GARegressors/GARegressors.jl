@@ -1,6 +1,7 @@
 module GARegressors
 
 using AutoHashEquals
+using DataFrames
 using Distributions
 using MLJModelInterface: MLJModelInterface
 MMI = MLJModelInterface
@@ -10,6 +11,7 @@ using MLJ: mae
 
 using ..AbstractModels
 using ..Intervals
+using ..Intervals.Parameters
 using ..LocalModels
 using ..Models
 using ..Scores
@@ -47,7 +49,7 @@ function MMI.clean!(m::GARegressor)
         m,
         :fiteval,
         x -> x ∈ [:mae, :dissimilarity, :likelihood],
-        "one of {:mae, :dissimilarity}",
+        "one of {:mae, :dissimilarity, :likelihood}",
     )
 
     if m.fiteval == :dissimilarity && !(m.dgmodel isa Models.Model)
@@ -61,6 +63,29 @@ function MMI.clean!(m::GARegressor)
 
     warning *= fixparamdomain!(m, :nmatch_min, x -> x > 0, "positive")
 
+    warning *= fixparamdomain!(
+        m,
+        :init,
+        x -> x ∈ [:inverse, :custom],
+        "one of {:inverse, :custom}",
+    )
+
+    warning *= fixparamdomain!(
+        m,
+        :init_sample_fname,
+        x -> isfile(x) || isdir(x),
+        "a CSV file or a folder of CSV files",
+    )
+
+    warning *= fixparamdomain!(m, :init_length_min, x -> x > 0, "positive")
+
+    warning *= fixparamdomain!(
+        m,
+        :init_length_max,
+        x -> x > m.init_length_min,
+        "in [$(m.init_length_min), Inf]",
+    )
+
     spread_min_max = (m.x_max - m.x_min) / 2
     warning *= fixparamdomain!(
         m,
@@ -69,7 +94,12 @@ function MMI.clean!(m::GARegressor)
         "[0, $spread_min_max]",
     )
 
-    warning *= fixparamdomain!(m, :init_spread_max, x -> x > 0, "in [0, Inf)")
+    warning *= fixparamdomain!(
+        m,
+        :init_spread_max,
+        x -> x > m.init_spread_min,
+        "in [$(m.init_spread_min), Inf)",
+    )
 
     warning *=
         fixparamdomain!(m, :init_params_spread_a, x -> x > 0, "in (0, Inf)")
