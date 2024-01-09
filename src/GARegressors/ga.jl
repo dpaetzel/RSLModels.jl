@@ -373,7 +373,7 @@ of solution lengths and then we repeatedly draw one of these lengths at random
 and create an individual of that length until the configured population size is
 reached. The only difference is that `init_inverse` probably does not fully hit
 the chosen lengths due to the probabilistic nature of generating a random
-solution based on the input space coverage termination criterion.
+solution based on minimum coverage termination criterion.
 """
 function init_inverse(
     rng::AbstractRNG,
@@ -390,10 +390,13 @@ function init_inverse(
     rows = sample(eachrow(params_dist), size_pop)
 
     pop::Vector{Genotype} = [
-        # TODO Make coverage criterion based on X
         draw_genotype(
             rng,
-            DX;
+            # Draw intervals using the training data for checking the coverage
+            # criterion. (An alternative would be to supply `DX` here which
+            # would result in `draw_genotype` drawing a random sample from the
+            # input space and trying to fulfil the coverage criterion on that.)
+            X;
             spread_min=row.spread_min,
             params_spread=(a=row.a, b=row.b),
             rate_coverage_min=row.rate_coverage_min,
@@ -434,7 +437,11 @@ function init_custom(
     pop::Vector{Genotype} = [
         draw_genotype(
             rng,
-            DX;
+            # Draw intervals using the training data for checking the coverage
+            # criterion. (An alternative would be to supply `DX` here which
+            # would result in `draw_genotype` drawing a random sample from the
+            # input space and trying to fulfil the coverage criterion on that.)
+            X;
             spread_min=spread_min,
             spread_max=spread_max,
             params_spread=(a=params_spread_a, b=params_spread_b),
