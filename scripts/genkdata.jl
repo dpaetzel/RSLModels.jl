@@ -78,8 +78,8 @@ process.
             )
             println(fhandle, line)
 
-            # Flush the file every 5th time or so.
-            if rand() < 0.2
+            # Flush the file every 100th time or so.
+            if rand() < 0.01
                 flush(fhandle)
             end
 
