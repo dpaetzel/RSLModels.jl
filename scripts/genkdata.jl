@@ -39,10 +39,12 @@ process.
 
     @everywhere include((@__DIR__) * "/_genkdata.jl")
 
+    iter = collect(Iterators.product(1:n_iter, DXs, rates_coverage_min))
+
     # Pattern from
     # https://github.com/timholy/ProgressMeter.jl/tree/master#tips-for-parallel-programming
     # (but fixed).
-    prog = Progress(n_iter)
+    prog = Progress(length(iter))
     channel = RemoteChannel(() -> Channel{Bool}())
     channel_out = RemoteChannel(() -> Channel{Tuple{Int64,Any}}())
 
@@ -88,9 +90,7 @@ process.
         @async begin
             # Note that we have to add a `@sync` here since otherwise the
             # `false` is written to the channel first.
-            @sync @distributed for (i, DX, rate_coverage_min) in collect(
-                Iterators.product(1:n_iter, DXs, rates_coverage_min),
-            )
+            @sync @distributed for (i, DX, rate_coverage_min) in iter
                 out = mysample1(
                     DX,
                     rate_coverage_min;
