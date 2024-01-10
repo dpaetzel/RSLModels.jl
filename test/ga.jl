@@ -2,6 +2,7 @@ using Infiltrator
 using DataFrames
 using MLJ
 using RSLModels.GARegressors
+using RSLModels.Intervals
 using RSLModels.Models
 using RSLModels.Transformers
 using Random
