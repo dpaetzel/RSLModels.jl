@@ -169,7 +169,7 @@ function MMI.fit(m::GARegressor, verbosity, X, y)
     # on `X` or `y` or to call `clean!` on the model; MLJ will carry out such
     # checks.”
 
-    fitresult, report = runga(MMI.matrix(X), y, m, verbosity)
+    fitresult, report = runga(MMI.matrix(X), y, m; verbosity=verbosity)
 
     cache = nothing
     # TODO Add convergence behaviour (elitist/mean fitness progression) etc. into
