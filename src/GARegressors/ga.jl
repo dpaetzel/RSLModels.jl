@@ -216,11 +216,6 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
     best::EvaluatedGenotype = pop[idx_best]
     len_best::Int = length(best)
 
-    # Initialize length-niching selection parameters.
-    width_window::Int = 7
-    lambda_window::Float64 = 0.0004
-    # TODO Extract width_window and lambda_window to config
-
     # Bias factor for ryerkerk2020's biased window mechanism.
     bias_window::Float64 = 0
 
@@ -297,10 +292,14 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         n_eval += length(offspring)
 
         # (4) in ryerkerk2020.
-        len_lbound =
-            min(Int(ceil(len_best - width_window / 2 + bias_window)), len_best)
+        len_lbound = min(
+            Int(ceil(len_best - config.select_width_window / 2 + bias_window)),
+            len_best,
+        )
         len_ubound = max(
-            Int(floor(len_best + width_window / 2 + bias_window)),
+            Int(
+                floor(len_best + config.select_width_window / 2 + bias_window),
+            ),
             len_best,
         )
         lengths = collect(len_lbound:len_ubound)
@@ -317,7 +316,8 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         # (3) in ryerkerk2020.
         bias_window =
             len_best - len_best_prev +
-            bias_window * exp(-lambda_window * sqrt(abs(bias_window)))
+            bias_window *
+            exp(-config.select_lambda_window * sqrt(abs(bias_window)))
     end
 
     deleteat!(pop, idx_best)
