@@ -119,7 +119,7 @@ Runs the GA based on the given config and training data.
 """
 function runga end
 
-function runga(X::XType, y::YType, config::GARegressor)
+function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
     # Note that this does not perform checks on the config but instead assumes
     # that it is valid.
 
@@ -150,10 +150,14 @@ function runga(X::XType, y::YType, config::GARegressor)
 
     # Cache initialization parameters.
     params_dist = if config.init == :inverse
+        if verbosity > 0
+            @info "Loading init distribution sample …"
+        end
+
         # Note that if the range is very wide this may be overly expensive.
         # TODO Consider to compute `selectparam` on-demand if very many lengths
         lens = (config.init_length_min):(config.init_length_max)
-        df = selectparams("kdata", lens...)
+        df = selectparams("kdata", lens...; verbosity=verbosity - 1)
         # TODO Make coverage configurable (but then we need to ensure that the
         # sample contains that coverage)
         # For now, we always take the highest-coverage parametrizations. Prepare
@@ -186,8 +190,13 @@ function runga(X::XType, y::YType, config::GARegressor)
     # Count number of evaluations.
     n_eval::Int = 0
 
+    if verbosity > 0
+        @info "Initializing population of size $(config.size_pop) …"
+    end
+
     # Initialize pop, repair it, and then eval it.
-    pop_uneval::Vector{Genotype}, report = init(rng, X, init1, config.size_pop)
+    pop_uneval::Vector{Genotype}, report =
+        init(rng, X, init1, config.size_pop; verbosity=verbosity - 1)
     pop_uneval[:], reports =
         unzip(repair.(Ref(rng), pop_uneval, Ref(X), Ref(config.nmatch_min)))
     pop::Vector{EvaluatedGenotype} =
@@ -216,6 +225,12 @@ function runga(X::XType, y::YType, config::GARegressor)
     bias_window::Float64 = 0
 
     for iter in 1:(config.n_iter)
+        if verbosity > 0
+            @info "Starting iteration $iter/$(config.n_iter) …"
+            @info "Current best individual has length $len_best and " *
+                  "$(config.fiteval) fitness $(best.fitness)."
+        end
+
         # TODO Consider to speed this up by inplace mutating a fixed array
         offspring_uneval = []
 

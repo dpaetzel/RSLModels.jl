@@ -360,7 +360,7 @@ function draw_intervals(
     usemmap::Bool=false,
     n_intervals_max::Int64=1000,
     return_coverage_rate::Bool=false,
-    verbose::Int=0,
+    verbosity::Int=0,
 )
     return draw_intervals(
         Random.default_rng(),
@@ -376,7 +376,7 @@ function draw_intervals(
         usemmap=usemmap,
         n_intervals_max=n_intervals_max,
         return_coverage_rate=return_coverage_rate,
-        verbose=verbose,
+        verbosity=verbosity,
     )
 end
 
@@ -394,7 +394,7 @@ function draw_intervals(
     usemmap::Bool=false,
     n_intervals_max::Int64=1000,
     return_coverage_rate::Bool=false,
-    verbose::Int=0,
+    verbosity::Int=0,
 )
     X::Matrix{Float64} = if usemmap
         (path_X, io_X) = mktemp(tempdir())
@@ -424,7 +424,7 @@ function draw_intervals(
         x_max=x_max,
         n_intervals_max=n_intervals_max,
         return_coverage_rate=return_coverage_rate,
-        verbose=verbose,
+        verbosity=verbosity,
     )
 
     # Not 100% sure whether this reassignment is necessary.
@@ -457,7 +457,7 @@ function draw_intervals(
     x_max::Float64=Intervals.X_MAX,
     n_intervals_max::Int=1000,
     return_coverage_rate::Bool=false,
-    verbose::Int=0,
+    verbosity::Int=0,
 )
     return draw_intervals(
         Random.default_rng(),
@@ -471,7 +471,7 @@ function draw_intervals(
         x_max=x_max,
         n_intervals_max=n_intervals_max,
         return_coverage_rate=return_coverage_rate,
-        verbose=verbose,
+        verbosity=verbosity,
     )
 end
 
@@ -487,7 +487,7 @@ function draw_intervals(
     x_max::Float64=Intervals.X_MAX,
     n_intervals_max::Int=1000,
     return_coverage_rate::Bool=false,
-    verbose::Int=0,
+    verbosity::Int=0,
 )
     n_samples, DX = size(X)
     M = Matrix{Bool}(undef, n_samples, n_intervals_max)
@@ -542,7 +542,7 @@ function draw_intervals(
     M_ = view(M, :, 1:length(intervals))
 
     intervals_final = if remove_final_fully_overlapped
-        if verbose >= 10
+        if verbosity >= 10
             println("Removing fully overlapped intervals …")
         end
         # Note that we have to `hcat` `M_` because it is a vector of vectors.

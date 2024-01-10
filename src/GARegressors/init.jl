@@ -85,8 +85,19 @@ Applies the `init1` function (should probably be an initializer such as the one
 created by `mkinit1_*`) `size_pop` times to `rng` and `X` and collects the
 results in a vector.
 """
-function init(rng::AbstractRNG, X::XType, init1::Function, size_pop::Int)
-    pop::Vector{Genotype} = [init1(rng, X) for _ in 1:(size_pop)]
+function init(
+    rng::AbstractRNG,
+    X::XType,
+    init1::Function,
+    size_pop::Int;
+    verbosity::Int=0,
+)
+    pop::Vector{Genotype} =
+        @showprogress desc = "init(…)" enabled = verbosity > 9 map(
+            1:(size_pop),
+        ) do _
+            return init1(rng, X)
+        end
     report = (;)
     return pop, report
 end
