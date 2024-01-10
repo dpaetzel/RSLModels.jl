@@ -45,8 +45,8 @@ function mutate(rng, g::Genotype, X::XType, config::GARegressor)
         push!(g_, condition)
     end
 
-    # Remove a metavariable.
-    if rand(rng) < config.mutate_p_rm
+    # Remove a metavariable if it leaves at least one.
+    if length(g_) > 1 && rand(rng) < p_rm
         idx = rand(rng, eachindex(g_))
         deleteat!(g_, idx)
     end
