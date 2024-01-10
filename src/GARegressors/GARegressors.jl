@@ -20,6 +20,8 @@ include("types.jl")
 include("ga.jl")
 include("select.jl")
 include("mutate.jl")
+include("repair.jl")
+include("recombine.jl")
 include("fitness.jl")
 
 export GARegressor
