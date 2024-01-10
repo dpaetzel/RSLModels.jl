@@ -30,7 +30,7 @@ let
             Logging.with_logger(SimpleLogger(Logging.Warn)) do
                 mach = machine(config, X, y)
                 fit!(mach)
-                return y_pred = predict(mach, X)
+                return y_pred = MLJ.predict(mach, X)
             end
             # Right now we only test whether all types work out etc.
             @test true
@@ -52,7 +52,7 @@ let
                 mach = machine(MinMaxScaler() |> config, X, y)
                 #! format: on
             fit!(mach)
-            y_pred = predict(mach, X)
+            y_pred = MLJ.predict(mach, X)
             # end
             # Right now we only test whether all types work out etc.
             @test true

@@ -10,7 +10,7 @@ using RSLModels.Transformers
             model = MinMaxScaler()
             mach = machine(model, X)
             fit!(mach)
-            X_ = transform(mach, X)
+            X_ = MLJ.transform(mach, X)
             X_ = MLJ.matrix(X_)
             @test all(0.0 .<= X_) && all(X_ .<= 1.0)
         end
