@@ -151,6 +151,21 @@ end
   of this length are actually generated during initialization.
 - `init_length_max::Int=$(params_default[:init_length_max])`: Shortest solution
   length to use during random initialization. See `init_length_min`.
+- `init_spread_min::Float64=$(params_default[:init_spread_min])`: If
+  `init==:custom`, the initial population is filled with solutions drawn from a
+  distribution of which this is one of the parameters (see
+  `RSLModels.Intervals.draw_intervals`).
+
+  In addition to that, this setting is also used whenever mutation adds a rule
+  to a solution (even if `init == :inverse`!). Same for `init_spread_max`,
+  `init_params_spread_a` and `init_params_spread_b`.
+- `init_spread_max::Float64=$(params_default[:init_spread_max])`: See
+  `init_spread_min`.
+- `init_params_spread_a::Float64=$(params_default[:init_params_spread_a])`: See
+  `init_spread_min`.
+- `init_params_spread_b::Float64=$(params_default[:init_params_spread_b])`: See
+  `init_spread_min`.
+- `init_rate_coverage_min::Float64=$(params_default[:init_rate_coverage_min])`:
 - `nmatch_min::Int=$(params_default[:nmatch_min])`: Minimum number of training
   data points to be matched by any rule so that the rule is considered during
   training/prediction. The repair operator applied on all individuals deletes

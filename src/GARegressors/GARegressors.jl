@@ -6,8 +6,9 @@ using Distributions
 using MLJModelInterface: MLJModelInterface
 MMI = MLJModelInterface
 using MLUtils
-using Random
 using MLJ: mae
+using Random
+using StatsBase
 
 using ..AbstractModels
 using ..Intervals
@@ -20,6 +21,7 @@ include("types.jl")
 include("ga.jl")
 include("select.jl")
 include("mutate.jl")
+include("init.jl")
 include("repair.jl")
 include("recombine.jl")
 include("fitness.jl")

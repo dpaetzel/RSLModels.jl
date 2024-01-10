@@ -166,26 +166,11 @@ function runga(X::XType, y::YType, config::GARegressor)
         nothing
     end
 
-    # Initialize.
-    #
-    # Count number of evaluations.
-    n_eval::Int = 0
-    pop_uneval::Vector{Genotype}, report = if config.init == :inverse
-        init_inverse(
-            rng,
-            ffunc,
-            X,
-            config.size_pop,
-            config.x_min,
-            config.x_max,
-            params_dist,
-        )
+    # Build initializer.
+    init1 = if config.init == :inverse
+        mkinit1_inverse(config.x_min, config.x_max, params_dist)
     else
-        init_custom(
-            rng,
-            ffunc,
-            X,
-            config.size_pop,
+        mkinit1_custom(
             config.x_min,
             config.x_max,
             config.init_spread_min,
@@ -195,6 +180,14 @@ function runga(X::XType, y::YType, config::GARegressor)
             config.init_rate_coverage_min,
         )
     end
+
+    # Initialize.
+    #
+    # Count number of evaluations.
+    n_eval::Int = 0
+
+    # Initialize pop, repair it, and then eval it.
+    pop_uneval::Vector{Genotype}, report = init(rng, X, init1, config.size_pop)
     pop_uneval[:], reports =
         unzip(repair.(Ref(rng), pop_uneval, Ref(X), Ref(config.nmatch_min)))
     pop::Vector{EvaluatedGenotype} =
@@ -238,8 +231,36 @@ function runga(X::XType, y::YType, config::GARegressor)
                 g1, g2 = (deepcopy(pop[idx1]), deepcopy(pop[idx2]))
             end
 
-            g1, report = mutate(rng, g1, X, config)
-            g2, report = mutate(rng, g2, X, config)
+            g1, report = mutate(
+                rng,
+                g1,
+                X,
+                config.mutate_rate_mut,
+                config.mutate_rate_std,
+                config.mutate_p_add,
+                config.mutate_p_rm,
+                config.init_spread_min,
+                config.init_spread_max,
+                config.init_params_spread_a,
+                config.init_params_spread_b,
+                config.x_min,
+                config.x_max,
+            )
+            g2, report = mutate(
+                rng,
+                g2,
+                X,
+                config.mutate_rate_mut,
+                config.mutate_rate_std,
+                config.mutate_p_add,
+                config.mutate_p_rm,
+                config.init_spread_min,
+                config.init_spread_max,
+                config.init_params_spread_a,
+                config.init_params_spread_b,
+                config.x_min,
+                config.x_max,
+            )
 
             g1, report = repair(rng, g1, X, config.nmatch_min)
             g2, report = repair(rng, g2, X, config.nmatch_min)
@@ -287,100 +308,6 @@ function runga(X::XType, y::YType, config::GARegressor)
     deleteat!(pop, idx_best)
     report = (; bias_window=bias_window, n_eval=n_eval)
     return GAResult(best, pop), report
-end
-
-"""
-Creates an initial population by drawing each solution from a distribution which
-corresponds to one (randomly drawn) row in `params_dist`.
-
-This somewhat approximates an initialization scheme where the user chooses a set
-of solution lengths and then we repeatedly draw one of these lengths at random
-and create an individual of that length until the configured population size is
-reached. The only difference is that `init_inverse` probably does not fully hit
-the chosen lengths due to the probabilistic nature of generating a random
-solution based on minimum coverage termination criterion.
-"""
-function init_inverse(
-    rng::AbstractRNG,
-    ffunc::Function,
-    X::XType,
-    size_pop::Int,
-    x_min::Float64,
-    x_max::Float64,
-    params_dist::DataFrame,
-)
-    N, DX = size(X)
-    params_dist = subset(params_dist, :DX => dx -> dx .== DX)
-
-    rows = sample(eachrow(params_dist), size_pop)
-
-    pop::Vector{Genotype} = [
-        draw_genotype(
-            rng,
-            # Draw intervals using the training data for checking the coverage
-            # criterion. (An alternative would be to supply `DX` here which
-            # would result in `draw_genotype` drawing a random sample from the
-            # input space and trying to fulfil the coverage criterion on that.)
-            X;
-            spread_min=row.spread_min,
-            params_spread=(a=row.a, b=row.b),
-            rate_coverage_min=row.rate_coverage_min,
-            remove_final_fully_overlapped=true,
-            x_min=x_min,
-            x_max=x_max,
-        ) for row in rows
-    ]
-    # TODO Consider whether to sample differently (e.g. ensure that all lengths
-    # are used at least once)
-
-    report = (;)
-    return pop, report
-end
-
-"""
-Creates an initial population by drawing `size_pop` solutions from the solution
-distribution defined by the `spread_*`, `params_spread_*` and
-`rate_coverage_min` parameters.
-
-Note that it can be difficult to control solution length this way (see
-`init_inverse` for a way to deal with this).
-"""
-function init_custom(
-    rng::AbstractRNG,
-    ffunc::Function,
-    X::XType,
-    size_pop::Int,
-    x_min::Float64,
-    x_max::Float64,
-    spread_min::Float64,
-    spread_max::Float64,
-    params_spread_a::Float64,
-    params_spread_b::Float64,
-    rate_coverage_min::Float64,
-)
-    N, DX = size(X)
-    pop::Vector{Genotype} = [
-        draw_genotype(
-            rng,
-            # Draw intervals using the training data for checking the coverage
-            # criterion. (An alternative would be to supply `DX` here which
-            # would result in `draw_genotype` drawing a random sample from the
-            # input space and trying to fulfil the coverage criterion on that.)
-            X;
-            spread_min=spread_min,
-            spread_max=spread_max,
-            params_spread=(a=params_spread_a, b=params_spread_b),
-            rate_coverage_min=rate_coverage_min,
-            # We always remove fully overlapped rules during initialization.
-            remove_final_fully_overlapped=true,
-            # TODO Consider to reduce this number for faster initialization
-            # n_samples=Parameters.n(dims),
-            x_min=x_min,
-            x_max=x_max,
-        ) for _ in 1:(size_pop)
-    ]
-    report = (;)
-    return pop, report
 end
 
 function fittest_idx(pop::AbstractVector{EvaluatedGenotype})

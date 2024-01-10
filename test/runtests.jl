@@ -2,10 +2,10 @@ using Test
 
 # TODO Find decent property-based testing framework for Julia
 
+include("ga.jl")
 include("minmaxscaler.jl")
 include("MLJInterface.jl")
 include("intervals.jl")
-include("ga.jl")
 
 using RSLModels.Models
 using Random

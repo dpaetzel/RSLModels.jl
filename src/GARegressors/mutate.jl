@@ -9,37 +9,91 @@ probabilities, also adds or removes a single metavariable.
 """
 function mutate end
 
-function mutate(rng, g::EvaluatedGenotype, X::XType, config::GARegressor)
-    return mutate(rng, g.genotype, X, config)
+function mutate(
+    rng::AbstractRNG,
+    g::EvaluatedGenotype,
+    X::XType,
+    rate_mut::Float64,
+    rate_std::Float64,
+    p_add::Float64,
+    p_rm::Float64,
+    spread_min::Float64,
+    spread_max::Float64,
+    params_spread_a::Float64,
+    params_spread_b::Float64,
+    x_min::Float64,
+    x_max::Float64,
+)
+    return mutate(
+        Random.default_rng(),
+        g.genotype,
+        X,
+        rate_mut,
+        rate_std,
+        p_add,
+        p_rm,
+        spread_min,
+        spread_max,
+        params_spread_a,
+        params_spread_b,
+        x_min,
+        x_max,
+    )
 end
 
-# TODO Unravel config
-function mutate(rng, g::Genotype, X::XType, config::GARegressor)
+function mutate(
+    rng::AbstractRNG,
+    g::Genotype,
+    X::XType,
+    rate_mut::Float64,
+    rate_std::Float64,
+    p_add::Float64,
+    p_rm::Float64,
+    spread_min::Float64,
+    spread_max::Float64,
+    params_spread_a::Float64,
+    params_spread_b::Float64,
+    x_min::Float64,
+    x_max::Float64,
+)
     # TODO Consider whether to add/rm first (so we don't waste bound mutation on
     # conditions that are removed a few lines later anyway). Note, however, that
     # this might result in an additional copy operation.
-    g_ = mutate_bounds(rng, g, config)
+    g_ = mutate_bounds(rng, g, rate_mut, rate_std, x_min, x_max)
 
     # Add a metavariable.
-    if rand(rng) < config.mutate_p_add
+    if rand(rng) < p_add
         N, DX = size(X)
+
+        # TODO Performance: Do not recompute this here but cache earlier
+        matching_matrix = elemof(X, g)
+        inv_weights = vec(float(sum(matching_matrix; dims=2)))
+        # If some data points are not covered by any of the conditions, we add
+        # the new condition such that it covers at least one of them.
+        weights = if any(inv_weights .== 0.0)
+            float(inv_weights .== 0.0)
+            # Otherwise we add the new condition such that overlap is not increased
+            # where there is a lot of overlap already.
+        else
+            1.0 ./ inv_weights
+        end
+        # We need to normalize the weights next.
+        weights /= sum(weights)
+
         # TODO Consider to enforce matching a configurable number of data points
-        # Draw a random data point.
-        idx = rand(rng, 1:N)
+        # Draw a random data point that is then ensured to be matched by the new
+        # condition.
+        idx = sample(rng, 1:N, ProbabilityWeights(weights))
         x = X[idx, :]
 
         condition = draw_interval(
             rng,
             x;
-            # TODO Use init() here
-            spread_min=config.init_spread_min,
-            spread_max=config.init_spread_max,
-            params_spread=(
-                a=config.init_params_spread_a,
-                b=config.init_params_spread_b,
-            ),
-            x_min=config.x_min,
-            x_max=config.x_max,
+            spread_min=spread_min,
+            spread_max=spread_max,
+            params_spread=(a=params_spread_a, b=params_spread_b),
+            x_min=x_min,
+            x_max=x_max,
         )
 
         push!(g_, condition)
@@ -63,12 +117,22 @@ function mutate_bounds end
 function mutate_bounds(
     rng::AbstractRNG,
     g::EvaluatedGenotype,
-    config::GARegressor,
+    rate_mut::Float64,
+    rate_std::Float64,
+    x_min::Float64,
+    x_max::Float64,
 )
-    return mutate_bounds(rng, g.genotype, config)
+    return mutate_bounds(rng, g.genotype, rate_mut, rate_std, x_min, x_max)
 end
 
-function mutate_bounds(rng::AbstractRNG, g::Genotype, config::GARegressor)
+function mutate_bounds(
+    rng::AbstractRNG,
+    g::Genotype,
+    rate_mut::Float64,
+    rate_std::Float64,
+    x_min::Float64,
+    x_max::Float64,
+)
     DX = dimensions(g[1])
 
     # TODO Consider to make intervals mutable for performance
@@ -80,11 +144,11 @@ function mutate_bounds(rng::AbstractRNG, g::Genotype, config::GARegressor)
     # We have `2 * DX` design variables per metavariable (each condition is one
     # metavariable).
     n_dvars = 2 * DX
-    p = config.mutate_rate_mut * 1.0 / (n_dvars * l)
-    std_mut = config.mutate_rate_std * (config.x_max - config.x_min)
+    p = rate_mut * 1.0 / (n_dvars * l)
+    std_mut = rate_std * (x_max - x_min)
 
     dist_mask = Bernoulli(p)
-    dist_mut = Normal(0, std_mut .* (config.x_max .- config.x_min))
+    dist_mut = Normal(0, std_mut .* (x_max .- x_min))
 
     # Do this in-place so we do not have to malloc repeatedly. However, this
     # seems to bring something like 100μs for `l == 1000` and `DX == 10`.
@@ -105,12 +169,12 @@ function mutate_bounds(rng::AbstractRNG, g::Genotype, config::GARegressor)
         rand!(rng, dist_mask, mask)
         rand!(rng, dist_mut, mutation)
         g_[idx].lbound[:] = g_[idx].lbound .+ mask .* mutation
-        g_[idx].lbound[:] = mirror.(g_[idx].lbound, config.x_min, config.x_max)
+        g_[idx].lbound[:] = mirror.(g_[idx].lbound, x_min, x_max)
 
         rand!(rng, dist_mask, mask)
         rand!(rng, dist_mut, mutation)
         g_[idx].ubound[:] = g_[idx].ubound .+ mask .* mutation
-        g_[idx].ubound[:] = mirror.(g_[idx].ubound, config.x_min, config.x_max)
+        g_[idx].ubound[:] = mirror.(g_[idx].ubound, x_min, x_max)
     end
 
     return g_

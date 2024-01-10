@@ -30,11 +30,7 @@ let
             let config = deepcopy(config)
                 config.size_pop = size_pop
                 config.rng = rng
-                pop, _ = GARegressors.init_custom(
-                    rng,
-                    ffunc,
-                    X,
-                    config.size_pop,
+                init1 = GARegressors.mkinit1_custom(
                     config.x_min,
                     config.x_max,
                     config.init_spread_min,
@@ -43,6 +39,7 @@ let
                     config.init_params_spread_b,
                     config.init_rate_coverage_min,
                 )
+                pop, _ = GARegressors.init(rng, X, init1, config.size_pop)
                 @test length(pop) == config.size_pop
             end
 
@@ -61,15 +58,12 @@ let
                     spread_min=[0.2, 0.3, 0.4],
                     rate_coverage_min=[0.8, 0.8, 0.8],
                 )
-                pop, _ = GARegressors.init_inverse(
-                    rng,
-                    ffunc,
-                    X,
-                    config.size_pop,
+                init1 = GARegressors.mkinit1_inverse(
                     config.x_min,
                     config.x_max,
                     df,
                 )
+                pop, _ = GARegressors.init(rng, X, init1, config.size_pop)
                 @test length(pop) == config.size_pop
             end
         end
@@ -131,11 +125,7 @@ let
             # `:inverse` init is hard to do here right now because test somehow
             # messes up paths and we can thus not properly set the
             # `init_sample_fname`.
-            pop, _ = GARegressors.init_custom(
-                rng,
-                ffunc,
-                X,
-                config.size_pop,
+            init1 = GARegressors.mkinit1_custom(
                 config.x_min,
                 config.x_max,
                 config.init_spread_min,
@@ -144,6 +134,7 @@ let
                 config.init_params_spread_b,
                 config.init_rate_coverage_min,
             )
+            pop, _ = GARegressors.init(rng, X, init1, config.size_pop)
             pop =
                 GARegressors.evaluate.(
                     pop,
@@ -185,11 +176,7 @@ let
             # `:inverse` init is hard to do here right now because test somehow
             # messes up paths and we can thus not properly set the
             # `init_sample_fname`.
-            pop, _ = GARegressors.init_custom(
-                rng,
-                ffunc,
-                X,
-                config.size_pop,
+            init1 = GARegressors.mkinit1_custom(
                 config.x_min,
                 config.x_max,
                 config.init_spread_min,
@@ -198,9 +185,17 @@ let
                 config.init_params_spread_b,
                 config.init_rate_coverage_min,
             )
+            pop, _ = GARegressors.init(rng, X, init1, config.size_pop)
 
             for g in pop
-                g_ = GARegressors.mutate_bounds(rng, g, config)
+                g_ = GARegressors.mutate_bounds(
+                    rng,
+                    g,
+                    config.mutate_rate_mut,
+                    config.mutate_rate_std,
+                    config.x_min,
+                    config.x_max,
+                )
 
                 # Mutating bounds does not change length.
                 @test length(g_) == length(g)
@@ -238,11 +233,7 @@ let
             # `:inverse` init is hard to do here right now because test somehow
             # messes up paths and we can thus not properly set the
             # `init_sample_fname`.
-            pop, _ = GARegressors.init_custom(
-                rng,
-                ffunc,
-                X,
-                config.size_pop,
+            init1 = GARegressors.mkinit1_custom(
                 config.x_min,
                 config.x_max,
                 config.init_spread_min,
@@ -251,9 +242,24 @@ let
                 config.init_params_spread_b,
                 config.init_rate_coverage_min,
             )
+            pop, _ = GARegressors.init(rng, X, init1, config.size_pop)
 
             for g in pop
-                g_, _ = GARegressors.mutate(rng, g, X, config)
+                g_, _ = GARegressors.mutate(
+                    rng,
+                    g,
+                    X,
+                    config.mutate_rate_mut,
+                    config.mutate_rate_std,
+                    config.mutate_p_add,
+                    config.mutate_p_rm,
+                    config.init_spread_min,
+                    config.init_spread_max,
+                    config.init_params_spread_a,
+                    config.init_params_spread_b,
+                    config.x_min,
+                    config.x_max,
+                )
 
                 # Mutation adds or removes at most one metavariable.
                 @test length(g) - 1 <= length(g_) <= length(g) + 1
@@ -269,11 +275,7 @@ let
             # `:inverse` init is hard to do here right now because test somehow
             # messes up paths and we can thus not properly set the
             # `init_sample_fname`.
-            pop, _ = GARegressors.init_custom(
-                rng,
-                ffunc,
-                X,
-                config.size_pop,
+            init1 = GARegressors.mkinit1_custom(
                 config.x_min,
                 config.x_max,
                 config.init_spread_min,
@@ -282,6 +284,7 @@ let
                 config.init_params_spread_b,
                 config.init_rate_coverage_min,
             )
+            pop, _ = GARegressors.init(rng, X, init1, config.size_pop)
 
             for g in pop
                 model = GARegressors.express(
