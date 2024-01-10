@@ -208,12 +208,16 @@ function runga(X::XType, y::YType, config::GARegressor)
             config.nmatch_min,
         )
     n_eval += length(pop)
+
+    # Initialize elitist logging.
     idx_best::Int = fittest_idx(pop)
     best::EvaluatedGenotype = pop[idx_best]
     len_best::Int = length(best)
 
+    # Initialize length-niching selection parameters.
     width_window::Int = 7
     lambda_window::Float64 = 0.0004
+    # TODO Extract width_window and lambda_window to config
 
     # Bias factor for ryerkerk2020's biased window mechanism.
     bias_window::Float64 = 0

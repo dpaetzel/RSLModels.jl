@@ -1,8 +1,11 @@
 """
+    mutate(rng)
+
 This is the mutation operator used by (Ryerkerk et al., 2020).
 
 It mutates, on average, one of the metavariables (i.e. conditions) fully but
-allows those mutations to be spread over several metavariables.
+allows those mutations to be spread over several metavariables and, with some
+probabilities, also adds or removes a single metavariable.
 """
 function mutate end
 

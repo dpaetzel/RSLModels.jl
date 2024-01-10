@@ -135,10 +135,11 @@ end
   initialization parameters and requires a sample of a certain joint
   distribution (see `RSLModels.Intervals.Parameters.selectparams`). This means
   that `init_length*` and `init_length*` are used whereas `init_spread*`,
-  `init_params*` and `init_rate*` are ignored (they are set internally based on
-  the sample). `:custom` means that the parameters are used as given by
-  `init_spread*`, `init_params*` and `init_rate*` whereas `init_length*` are
-  ignored. You should probably use `:inverse` unless you know what you're doing.
+  `init_params*` and `init_rate*` are ignored during initial population
+  initialization (they are set internally based on the sample). `:custom` means
+  that the parameters are used as given by `init_spread*`, `init_params*` and
+  `init_rate*` whereas `init_length*` are ignored. You should probably use
+  `:inverse` unless you know what you're doing.
 - `init_sample_fname::String=$(params_default[:init_sample_fname])`: If
   `init=:inverse` then this specifies the CSV file (or the folder of CSV files,
   see `RSLModels.Intervals.Parameters.selectparams`) that contains the joint
