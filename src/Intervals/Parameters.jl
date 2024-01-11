@@ -42,7 +42,9 @@ function hashpath(path)
         end
         return bytes2hex(sha256(reduce((*), hashs)))
     else
-        error("Provided path is neither a file nor a directory")
+        error(
+            "hashpath: Provided path is neither a file nor a directory: $path",
+        )
     end
 end
 
@@ -75,7 +77,7 @@ function readdata(fname; dropcensored=true, collapsemedian=false, verbosity=0)
         end
         combined_df
     else
-        error("Provided path is neither a file nor a directory")
+        error("readdata: Provided path is neither a file nor a directory: $path")
     end
 
     # When generating the data for this, we cancel trials at some number of
