@@ -1,11 +1,11 @@
 module Parameters
 
-using Infiltrator
 using ProgressMeter
 using CSV
 using DataFrames
 using Distributions
 using ScientificTypes
+using SHA
 using Statistics
 using StatsBase
 using Tables
@@ -15,6 +15,36 @@ export histmode, selectparams
 # TODO Lock this header with genkdata.jl
 const csv_header::Vector{Symbol} =
     [:DX, :rate_coverage_min, :spread_min, :a, :b, :rate_coverage, :K]
+
+"""
+If the given path is a file, SHA256 hash its contents and return the resulting
+string. If the given path is a directory, SHA256 hash the contents of all files
+directy below it and then SHA256 these concatenated hashes again to get a single
+hash for the directory contents.
+
+Note that further directories in `path` are ignored (i.e. we go only one level
+deep).
+
+Further, note that we ignore file names and only consider contents.
+"""
+function hashpath(path)
+    if isfile(path)
+        content = read(path)
+        return bytes2hex(sha256(content))
+    elseif isdir(path)
+        hashs = String[]
+        for fname in readdir(path)
+            fpath = joinpath(path, fname)
+            if isfile(fpath)
+                content = read(fpath)
+                push!(hashs, bytes2hex(sha256(content)))
+            end
+        end
+        return bytes2hex(sha256(reduce((*), hashs)))
+    else
+        error("Provided path is neither a file nor a directory")
+    end
+end
 
 function readdata(fname; dropcensored=true, collapsemedian=false, verbosity=0)
     df = if isfile(fname)
@@ -135,6 +165,11 @@ function histmode(
 end
 
 """
+Used internally to memoize `selectparams` results.
+"""
+const CACHE = Dict{Tuple{String,Tuple{Vararg{Int}}},DataFrame}()
+
+"""
     selectparams(fname, K...; <keyword arguments>)
 
 For each `K` given, crudely estimate sensible values for the `draw_intervals`
@@ -154,51 +189,63 @@ files to be merged.
 - `verbosity::Int=0`:
 """
 function selectparams(fname, K...; verbosity=0)
-    # TODO Cache the result as a jls file based on a hash of the result of
-    # readdata and K
-    if verbosity > 9
-        @info "Reading data from location \"$fname\" …"
+    # For medium-sized samples it seems to be several seconds cheaper to hash
+    # the CSV files and check whether we computed the corresponding `DataFrame`
+    # already instead of recomputing the `DataFrame`. This comes in especially
+    # handy when doing hyperparameter optimization (note that it's complicated
+    # to pass the `DataFrame` as an argument to the learning algorithm right
+    # now because of JSON serialization and stuff).
+    hash = hashpath(fname)
+    # Try to get the key or if it is not present, compute the do block, store
+    # the key with its result and then return the result.
+    get!(CACHE, (hash, K)) do
+        # TODO Cache the result as a jls file based on a hash of the result of
+        # readdata and K
+        if verbosity > 9
+            @info "Reading data from location \"$fname\" …"
+        end
+        df = readdata(fname; verbosity=verbosity)
+        if verbosity > 9
+            @info "Read data from location \"$fname\"."
+        end
+
+        K_problem = filter(K_ -> K_ ∉ df.K, K)
+        if !isempty(K_problem)
+            @warn "Requested K ∈ $K_problem not in data, not attempting to " *
+                  "select parameters for it"
+            K = filter(K_ -> K_ ∉ K_problem, K)
+        end
+
+        # Select the observations from the sample that are of interest (i.e. the
+        # ones that fulfill our `K` condition).
+        df_sel = subset(df, :K => K_ -> K_ .∈ Ref(K))
+
+        df_sel_mean = combine(
+            groupby(df_sel, [:DX, :rate_coverage_min, :K]),
+            nrow => :count,
+            [:spread_min, :a, :b] =>
+                ((s, a, b) -> histmode((; spread_min=s, a=a, b=b))) =>
+                    AsTable,
+        )
+        df_sel_mean = sort(df_sel_mean)
+
+        df_sel_mean[!, :Beta] = Beta.(df_sel_mean.a, df_sel_mean.b)
+
+        df_sel_mean[!, :Beta_mean] = mean.(df_sel_mean.Beta)
+
+        df_sel_mean[!, :Beta_var] = var.(df_sel_mean.Beta)
+
+        df_sel_mean[!, :Beta_std] = std.(df_sel_mean.Beta)
+
+        # This is simply the formula from `Intervals.draw_spread`.
+        df_sel_mean[!, :spread_mean] =
+            df_sel_mean.spread_min .+
+            mean.(df_sel_mean.Beta) .* (0.5 .- df_sel_mean.spread_min)
+
+        select!(df_sel_mean, Not(:Beta))
+
+        return df_sel_mean
     end
-    df = readdata(fname; verbosity=verbosity)
-    if verbosity > 9
-        @info "Read data from location \"$fname\"."
-    end
-
-    K_problem = filter(K_ -> K_ ∉ df.K, K)
-    if !isempty(K_problem)
-        @warn "Requested K ∈ $K_problem not in data, not attempting to " *
-              "select parameters for it"
-        K = filter(K_ -> K_ ∉ K_problem, K)
-    end
-
-    # Select the observations from the sample that are of interest (i.e. the
-    # ones that fulfill our `K` condition).
-    df_sel = subset(df, :K => K_ -> K_ .∈ Ref(K))
-
-    df_sel_mean = combine(
-        groupby(df_sel, [:DX, :rate_coverage_min, :K]),
-        nrow => :count,
-        [:spread_min, :a, :b] =>
-            ((s, a, b) -> histmode((; spread_min=s, a=a, b=b))) => AsTable,
-    )
-    df_sel_mean = sort(df_sel_mean)
-
-    df_sel_mean[!, :Beta] = Beta.(df_sel_mean.a, df_sel_mean.b)
-
-    df_sel_mean[!, :Beta_mean] = mean.(df_sel_mean.Beta)
-
-    df_sel_mean[!, :Beta_var] = var.(df_sel_mean.Beta)
-
-    df_sel_mean[!, :Beta_std] = std.(df_sel_mean.Beta)
-
-    # This is simply the formula from `Intervals.draw_spread`.
-    df_sel_mean[!, :spread_mean] =
-        df_sel_mean.spread_min .+
-        mean.(df_sel_mean.Beta) .* (0.5 .- df_sel_mean.spread_min)
-
-    select!(df_sel_mean, Not(:Beta))
-
-    return df_sel_mean
 end
 
 end
