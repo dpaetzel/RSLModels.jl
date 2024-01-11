@@ -10,14 +10,18 @@ i3 = Intervals.Interval(i1.ubound, i1.ubound .+ 0.2)
 inters13 = intersection(i1, i3)
 @test inters13.lbound == inters13.ubound
 
-i4 = Intervals.Interval(i1.ubound, i1.ubound .+ 0.2; lopen=[true])
+i4 = Intervals.Interval(i1.ubound, i1.ubound .+ 0.2; lopen=BitVector((true,)))
 @test intersection(i1, i4) == nothing
 
-i4 = Intervals.Interval(i1.ubound, i1.ubound .+ 0.2; uopen=[true])
+i4 = Intervals.Interval(i1.ubound, i1.ubound .+ 0.2; uopen=BitVector((true,)))
 @test intersection(i1, i4) != nothing
 
-i4 =
-    Intervals.Interval(i1.ubound, i1.ubound .+ 0.2; lopen=[true], uopen=[true])
+i4 = Intervals.Interval(
+    i1.ubound,
+    i1.ubound .+ 0.2;
+    lopen=BitVector((true,)),
+    uopen=BitVector((true,)),
+)
 @test intersection(i1, i4) == nothing
 
 i1 = Intervals.draw_interval([0.5, 0.5, 0.5]; spread_min=0.2)
@@ -28,19 +32,25 @@ i3 = Intervals.Interval(i1.ubound, i1.ubound .+ 0.2)
 inters13 = intersection(i1, i3)
 @test inters13.lbound == inters13.ubound
 
-i4 =
-    Intervals.Interval(i1.ubound, i1.ubound .+ 0.2; lopen=[true, false, false])
+i4 = Intervals.Interval(
+    i1.ubound,
+    i1.ubound .+ 0.2;
+    lopen=BitVector((true, false, false)),
+)
 @test intersection(i1, i4) == nothing
 
-i4 =
-    Intervals.Interval(i1.ubound, i1.ubound .+ 0.2; uopen=[true, false, false])
+i4 = Intervals.Interval(
+    i1.ubound,
+    i1.ubound .+ 0.2;
+    uopen=BitVector((true, false, false)),
+)
 @test intersection(i1, i4) != nothing
 
 i4 = Intervals.Interval(
     i1.ubound,
     i1.ubound .+ 0.2;
-    lopen=[false, true, false],
-    uopen=[false, false, true],
+    lopen=BitVector((false, true, false)),
+    uopen=BitVector((false, false, true)),
 )
 @test intersection(i1, i4) == nothing
 

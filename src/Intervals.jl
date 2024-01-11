@@ -32,15 +32,15 @@ const X_MIN::Float64 = 0.0
 const X_MAX::Float64 = 1.0
 
 @auto_hash_equals struct Interval
-    lbound::AbstractVector{Float64}
-    ubound::AbstractVector{Float64}
-    lopen::AbstractVector{Bool}
-    uopen::AbstractVector{Bool}
+    lbound::Vector{Float64}
+    ubound::Vector{Float64}
+    lopen::BitVector
+    uopen::BitVector
     function Interval(
-        lbound::AbstractVector{Float64},
-        ubound::AbstractVector{Float64};
-        lopen::AbstractVector{Bool}=repeat([false], length(lbound)),
-        uopen::AbstractVector{Bool}=repeat([false], length(ubound)),
+        lbound::Vector{Float64},
+        ubound::Vector{Float64};
+        lopen::BitVector=falses(length(lbound)),
+        uopen::BitVector=falses(length(ubound)),
     )
         # Note that open intervals are allowed to have lower and upper bounds be
         # the same (which results in an empty set).
