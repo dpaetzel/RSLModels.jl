@@ -157,7 +157,11 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         # Note that if the range is very wide this may be overly expensive.
         # TODO Consider to compute `selectparam` on-demand if very many lengths
         lens = (config.init_length_min):(config.init_length_max)
-        df = selectparams("kdata", lens...; verbosity=verbosity - 1)
+        df = selectparams(
+            config.init_sample_fname,
+            lens...;
+            verbosity=verbosity - 1,
+        )
         # TODO Make coverage configurable (but then we need to ensure that the
         # sample contains that coverage)
         # For now, we always take the highest-coverage parametrizations. Prepare
