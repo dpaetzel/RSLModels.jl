@@ -90,7 +90,8 @@ interval = draw_interval(
 @test all(interval.ubound .<= x_max)
 
 # Check that remove_full_overlaps does not change coverage.
-intervals = draw_intervals(dim; remove_final_fully_overlapped=false)
+rate_coverage, intervals =
+    draw_intervals(dim; remove_final_fully_overlapped=false)
 X = rand(10000, dim)
 count_match = count(any(elemof(X, intervals); dims=2))
 count_match2 =
@@ -98,6 +99,7 @@ count_match2 =
 @test count_match == count_match2
 
 # Ensure that usemmap does not change the result.
-intervals1 = draw_intervals(Random.Xoshiro(1), dim)
-intervals2 = draw_intervals(Random.Xoshiro(1), dim; usemmap=true)
+rate_coverage, intervals1 = draw_intervals(Random.Xoshiro(1), dim)
+rate_coverage, intervals2 =
+    draw_intervals(Random.Xoshiro(1), dim; usemmap=true)
 @test all(intervals1 .== intervals2)

@@ -24,10 +24,6 @@ export Interval,
     remove_fully_overlapped,
     volume
 
-# We want to track global assignments as well when doing
-# `includet(thisfile.jl)`.
-__revise_mode__ = :evalassign
-
 const X_MIN::Float64 = 0.0
 const X_MAX::Float64 = 1.0
 
@@ -359,7 +355,6 @@ function draw_intervals(
     x_max::Float64=Intervals.X_MAX,
     usemmap::Bool=false,
     n_intervals_max::Int64=1000,
-    return_coverage_rate::Bool=false,
     verbosity::Int=0,
 )
     return draw_intervals(
@@ -375,7 +370,6 @@ function draw_intervals(
         x_max=x_max,
         usemmap=usemmap,
         n_intervals_max=n_intervals_max,
-        return_coverage_rate=return_coverage_rate,
         verbosity=verbosity,
     )
 end
@@ -393,7 +387,6 @@ function draw_intervals(
     x_max::Float64=Intervals.X_MAX,
     usemmap::Bool=false,
     n_intervals_max::Int64=1000,
-    return_coverage_rate::Bool=false,
     verbosity::Int=0,
 )
     X::Matrix{Float64} = if usemmap
@@ -423,7 +416,6 @@ function draw_intervals(
         x_min=x_min,
         x_max=x_max,
         n_intervals_max=n_intervals_max,
-        return_coverage_rate=return_coverage_rate,
         verbosity=verbosity,
     )
 
@@ -456,7 +448,6 @@ function draw_intervals(
     x_min::Float64=Intervals.X_MIN,
     x_max::Float64=Intervals.X_MAX,
     n_intervals_max::Int=1000,
-    return_coverage_rate::Bool=false,
     verbosity::Int=0,
 )
     return draw_intervals(
@@ -470,7 +461,6 @@ function draw_intervals(
         x_min=x_min,
         x_max=x_max,
         n_intervals_max=n_intervals_max,
-        return_coverage_rate=return_coverage_rate,
         verbosity=verbosity,
     )
 end
@@ -486,7 +476,6 @@ function draw_intervals(
     x_min::Float64=Intervals.X_MIN,
     x_max::Float64=Intervals.X_MAX,
     n_intervals_max::Int=1000,
-    return_coverage_rate::Bool=false,
     verbosity::Int=0,
 )
     n_samples, DX = size(X)
@@ -558,11 +547,7 @@ function draw_intervals(
               "$rate_coverage_min" maxlog = 10
     end
 
-    if return_coverage_rate
-        return rate_coverage, intervals
-    else
-        return intervals
-    end
+    return rate_coverage, intervals
 end
 
 """

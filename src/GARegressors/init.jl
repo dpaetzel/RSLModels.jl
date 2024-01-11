@@ -21,7 +21,7 @@ function mkinit1_inverse(
         N, DX = size(X)
         params_dist = subset(params_dist, :DX => dx -> dx .== DX)
         row = sample(eachrow(params_dist))
-        return draw_genotype(
+        rate_coverage, conditions = draw_genotype(
             rng,
             # Draw intervals using the training data for checking the coverage
             # criterion. (An alternative would be to supply `DX` here which
@@ -35,6 +35,7 @@ function mkinit1_inverse(
             x_min=x_min,
             x_max=x_max,
         )
+        return conditions
     end
 
     return _init1
@@ -58,7 +59,7 @@ function mkinit1_custom(
     rate_coverage_min::Float64,
 )
     function _init1(rng, X)
-        return draw_genotype(
+        rate_coverage, conditions = draw_genotype(
             rng,
             # Draw intervals using the training data for checking the coverage
             # criterion. (An alternative would be to supply `DX` here which
@@ -76,6 +77,7 @@ function mkinit1_custom(
             x_min=x_min,
             x_max=x_max,
         )
+        return conditions
     end
     return _init1
 end

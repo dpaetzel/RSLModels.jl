@@ -81,7 +81,7 @@ function draw_model(
     x_min=X_MIN,
     x_max=X_MAX,
 )
-    conditions = draw_intervals(
+    rate_coverage, conditions = draw_intervals(
         rng,
         dims;
         spread_min=spread_min,

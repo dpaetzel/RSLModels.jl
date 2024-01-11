@@ -38,7 +38,6 @@ function mysample1(
         spread_min=spread_min,
         usemmap=usemmap,
         n_intervals_max=n_intervals_max,
-        return_coverage_rate=true,
         # verbose=10,
     )
 
