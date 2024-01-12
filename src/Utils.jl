@@ -125,7 +125,7 @@ function onall(f, iter)
     # (but fixed).
     prog = Progress(n_iter)
     channel = RemoteChannel(() -> Channel{Bool}())
-    channel_out = RemoteChannel(() -> Channel{Tuple{Int64,Any,Any}}())
+    channel_out = RemoteChannel(() -> Channel{Tuple{Int,Any,Any}}())
 
     outs = Vector{Tuple{Any,Any}}(undef, n_iter)
 

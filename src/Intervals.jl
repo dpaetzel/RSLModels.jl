@@ -147,7 +147,7 @@ function volume(interval::Interval)
 end
 
 function dimensions(interval::Interval)
-    return size(interval.lbound, 1)::Int64
+    return size(interval.lbound, 1)::Int
 end
 
 """
@@ -344,7 +344,7 @@ If no `rng` is provided, use the `Random.default_rng()`.
 function draw_intervals end
 
 function draw_intervals(
-    dims::Int64;
+    dims::Int;
     spread_min::Float64=0.0,
     spread_max::Float64=Inf,
     params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
@@ -354,7 +354,7 @@ function draw_intervals(
     x_min::Float64=Intervals.X_MIN,
     x_max::Float64=Intervals.X_MAX,
     usemmap::Bool=false,
-    n_intervals_max::Int64=1000,
+    n_intervals_max::Int=1000,
     verbosity::Int=0,
 )
     return draw_intervals(
@@ -376,7 +376,7 @@ end
 
 function draw_intervals(
     rng::AbstractRNG,
-    dims::Int64;
+    dims::Int;
     spread_min::Float64=0.0,
     spread_max::Float64=Inf,
     params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
@@ -386,7 +386,7 @@ function draw_intervals(
     x_min::Float64=Intervals.X_MIN,
     x_max::Float64=Intervals.X_MAX,
     usemmap::Bool=false,
-    n_intervals_max::Int64=1000,
+    n_intervals_max::Int=1000,
     verbosity::Int=0,
 )
     X::Matrix{Float64} = if usemmap
