@@ -13,6 +13,10 @@ using StatsBase
 let
     DX = 5
     X, y = rand(300, DX), rand(300)
+    randsol(rng, len) = Intervals.draw_interval.(sample(rng, eachrow(X), len))
+    randpop(rng, lens) = randsol.(Ref(rng), lens)
+    x_min = Intervals.X_MIN
+    x_max = Intervals.X_MAX
     ffunc = GARegressors.mkffunc(GARegressors.MAEFitness(X, y))
     config = GARegressor(;
         x_min=0.0,
@@ -120,32 +124,21 @@ let
     @testset "select" begin
         rng = Random.Xoshiro(123)
 
-        let config = deepcopy(config)
-            config.rng = rng
-            # `:inverse` init is hard to do here right now because test somehow
-            # messes up paths and we can thus not properly set the
-            # `init_sample_fname`.
-            init1 = GARegressors.mkinit1_custom(
-                config.x_min,
-                config.x_max,
-                config.init_spread_min,
-                config.init_spread_max,
-                config.init_params_spread_a,
-                config.init_params_spread_b,
-                config.init_rate_coverage_min,
-            )
-            pop, _ = GARegressors.init(rng, X, init1, config.size_pop)
+        let size_pop = 32
+            lengths = 1:10
+            nmatch_min = 2
+            pop_uneval = randpop(rng, rand(rng, lengths, size_pop))
             pop =
                 GARegressors.evaluate.(
-                    pop,
+                    pop_uneval,
                     Ref(X),
                     Ref(y),
-                    config.x_min,
-                    config.x_max,
-                    ffunc,
-                    config.nmatch_min,
+                    Ref(x_min),
+                    Ref(x_max),
+                    Ref(ffunc),
+                    Ref(nmatch_min),
                 )
-            for n_select in 1:length(pop)
+            for n_select in 1:size_pop
                 for len_l in 1:(maximum(length.(pop)) + 1)
                     for len_u in len_l:(maximum(length.(pop)) + 1)
                         selection, _ = GARegressors.select(
