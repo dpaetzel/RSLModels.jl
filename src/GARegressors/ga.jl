@@ -220,6 +220,10 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
     best::EvaluatedGenotype = pop[idx_best]
     len_best::Int = length(best)
 
+    # Initialize convergence logging.
+    log_fitness = Array{Float64}(undef, config.size_pop, config.n_iter)
+    log_lens = Array{Float64}(undef, config.size_pop, config.n_iter)
+
     # Bias factor for ryerkerk2020's biased window mechanism.
     bias_window::Float64 = 0
 
@@ -322,10 +326,19 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
             len_best - len_best_prev +
             bias_window *
             exp(-config.select_lambda_window * sqrt(abs(bias_window)))
+
+        # Log convergence metrics.
+        log_fitness[:, iter] .= getproperty.(pop, :fitness)
+        log_lens[:, iter] .= length.(pop)
     end
 
     deleteat!(pop, idx_best)
-    report = (; bias_window=bias_window, n_eval=n_eval)
+    report = (;
+        bias_window=bias_window,
+        n_eval=n_eval,
+        log_fitness=log_fitness,
+        log_lens=log_lens,
+    )
     return GAResult(best, pop), report
 end
 
