@@ -20,13 +20,13 @@ inputs (i.e. only the number of inputs matters for this function).
     "Output distribution."
     dist_out::Distribution
     "Mixing coefficient."
-    coef_mix::Real
+    coef_mix::Float64
     # Whether this is a default rule (and should thus not undergo mixing
     # coefficient fixing).
     isdefault::Bool
     function ConstantModel(
         dist_out::Distribution,
-        coef_mix::Real,
+        coef_mix::Float64,
         # Whether this is a default rule (and should thus not undergo mixing
         # coefficient fixing).
         isdefault::Bool,
@@ -35,7 +35,7 @@ inputs (i.e. only the number of inputs matters for this function).
     end
     function ConstantModel(
         dist_out::Distribution,
-        coef_mix::Real;
+        coef_mix::Float64;
         # Whether this is a default rule (and should thus not undergo mixing
         # coefficient fixing).
         isdefault::Bool=false,
