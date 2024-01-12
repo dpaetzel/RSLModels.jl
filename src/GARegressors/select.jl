@@ -52,7 +52,7 @@ function select(
         append!(selection, selection_filler)
     end
 
-    @assert length(selection) == n_select "$selection, $n_select"
+    @assert length(selection) == n_select "$(length(selection)), $n_select"
 
     report = (;)
     return selection, report
