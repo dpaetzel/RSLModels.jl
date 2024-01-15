@@ -21,7 +21,7 @@ function fname_sel_default(fname)
     return if isfile(fname)
         replace(fname, r".csv$" => ".paramselect.csv")
     elseif isdir(fname)
-        replace(fname * ".paramselect.csv")
+        replace(rstrip(fname, '/') * ".paramselect.csv")
     else
         "paramselect.csv"
     end
