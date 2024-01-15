@@ -10,19 +10,38 @@ julia -p 20 --project=. scripts/genkdata.jl --n-iter 10000
 ```
 
 
-See also `slurm/genkdata.sbatch` (which can be submitted to our Slurm cluster
-using `sbatch slurm/genkdata.sbatch`). Adjust the number of processes (`-p`
-option to `julia`) according to the hardware you use.
-
-
 This generates a CSV file such as `2023-11-23-12-23-35-578-Bym3-kdata.csv`.
 Let's assume that this file's name is `$kdata_csv`.
 
 
-If you have access to a Slurm cluster, consider to start many medium-sized jobs
-(e.g. 1000 jobs with `--n-iter 100` each). Put the files generated into a new
-directory and use that directory as `$kdata_csv` in the next step instead of a
-single file name.
+Note that you you should probably adjust the number of processes (`-p` option to
+`julia`) according to the hardware you use.
+
+
+Since I'm running this on our Slurm cluster, see `slurm/genkdata.sbatch` for the
+exact call I'm using.
+
+
+If you have access to a Slurm cluster as well, consider to start many
+medium-sized jobs (e.g. 1000 jobs with `--n-iter 2000` each) each of which will
+create a CSV file.  Put the files generated into a new directory and use that
+directory as `$kdata_csv` in the next step instead of a single file name.
+
+
+A Slurm job corresponding to
+
+```
+nix develop . --impure --command julia -p 4 --project=. scripts/genkdata.jl --usemmap --n-iter=2000
+
+```
+
+running on an allocation of 4 cores of an *AMD EPYC 7502 32-Core Processor* and
+100GB RAM takes around
+
+```
+sacct --job 439387 -o Elapsed --state COMPLETED | awk -F: '{ sec += ($1 * 3600) + ($2 * 60) + $3; count++ } END { avg_sec = sec / count; printf "%02d:%02d:%02d\n", avg_sec/3600, (avg_sec%3600)/60, avg_sec%60 }'
+01:26:45
+```
 
 
 ## Extract learning task generator hyperparameters: `scripts/selectgendataparams.jl`

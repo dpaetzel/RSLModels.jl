@@ -42,35 +42,36 @@ as the original file but extension `.selection.csv`).
     set_theme!()
     update_theme!(theme_latexfonts())
     update_theme!(;
-        resolution=(1100, 700),
+        resolution=(1300, 1000),
         # palette=(; colors=:seaborn_colorblind),
         palette=(; color=reverse(ColorSchemes.seaborn_colorblind.colors)),
     )
-
-    fname_sel = fname_sel_default(fname)
-
-    @info "Analysing $fname and writing selected parameters to $fname_sel …"
 
     if isempty(K)
         @info "No K given, using default $K_default …"
         K = K_default
     end
 
-    df_sel_mean = Logging.with_logger(SimpleLogger(Logging.Debug)) do
-        return selectparams(fname, K...)
+    fname_sel = fname_sel_default(fname)
+
+    @info "Analysing $fname and writing selected parameters to $fname_sel …"
+
+    # TODO Actually not the mean but an approximation of the mode
+    df_sel_mode = Logging.with_logger(SimpleLogger(Logging.Debug)) do
+        return selectparams(fname, K...; verbosity=1000)
     end
 
-    CSV.write(fname_sel, df_sel_mean)
+    CSV.write(fname_sel, df_sel_mode)
 
     @info "Wrote selected parameters to $fname_sel. Doing visual analysis next."
 
     # I know that it's ugly to reread the sample from disk but I'd rather have a
-    # nice API for `selectparams` than making that ugly just so this script
-    # looks nicer.
-    df = Parameters.readdata(fname)
+    # nice API for `selectparams` (which is used by other parts of the code as
+    # well) than making that ugly just so this script looks nicer.
+    df = Parameters.readdata(fname; verbosity=1000)
 
     # For each combination of `DX` and `rate_coverage_min` in the sample, show
-    # the distribution over K.
+    # the distribution over `K`.
     display(
         draw(
             data(df) *
@@ -88,6 +89,53 @@ as the original file but extension `.selection.csv`).
     # Select the observations from the sample that are of interest (i.e. the
     # ones that fulfill our `K` condition).
     df_sel = subset(df, :K => K_ -> K_ .∈ Ref(K))
+
+    # For one coverage rate, for each combination of `DX` and `K` in the sample,
+    # show the distributions over each pair of two parameters.
+    draw(
+        data(subset(df_sel, :rate_coverage_min => r -> r .== 0.9)) *
+        mapping(:a, :b; row=:K => nonnumeric, col=:DX => nonnumeric) *
+        AlgebraOfGraphics.density();
+        # axis=(yscale=log10, xscale=log10),
+    )
+    println()
+
+    draw(
+        data(subset(df_sel, :rate_coverage_min => r -> r .== 0.9)) *
+        mapping(:a, :spread_min; row=:K => nonnumeric, col=:DX => nonnumeric) *
+        AlgebraOfGraphics.density();
+        # axis=(yscale=log10, xscale=log10),
+    )
+    println()
+
+    draw(
+        data(subset(df_sel, :rate_coverage_min => r -> r .== 0.9)) *
+        mapping(:b, :spread_min; row=:K => nonnumeric, col=:DX => nonnumeric) *
+        AlgebraOfGraphics.density();
+        # axis=(yscale=log10, xscale=log10),
+    )
+    println()
+
+    # Show (unnormalized) “slices”  of the joint distribution of the parameters.
+    for (spread_l, spread_u) in
+        [(0.0, 0.1), (0.1, 0.2), (0.2, 0.3), (0.3, 0.4), (0.4, 0.5)]
+        println("$spread_l ≤ :spread_min ≤ $spread_u")
+        display(
+            draw(
+                data(
+                    subset(
+                        df_sel,
+                        :rate_coverage_min => r -> r .== 0.9,
+                        :spread_min => s -> spread_l .<= s .<= spread_u,
+                    ),
+                ) *
+                mapping(:a, :b; row=:K => nonnumeric, col=:DX => nonnumeric) *
+                AlgebraOfGraphics.density();
+                # axis=(yscale=log10, xscale=log10),
+            ),
+        )
+        println()
+    end
 
     # Show for each combination of `DX` and `rate_coverage_min`, how often we
     # observed each `K`.
@@ -109,7 +157,7 @@ as the original file but extension `.selection.csv`).
     # of `DX` and `rate_coverage_min`.
     display(
         draw(
-            data(df_sel_mean) *
+            data(df_sel_mode) *
             mapping(;
                 layout=:DX => nonnumeric,
                 # row=:K => nonnumeric,
