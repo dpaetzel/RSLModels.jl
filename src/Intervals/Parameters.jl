@@ -113,6 +113,10 @@ end
 Compute a (multivariate) histogram of the data and approximate the underlying
 density's mode by computing the mean of the data points falling into
 highest-density bin.
+
+Returns a pair of the approximated mode and the number of data points falling
+into the highest-density bin (i.e. the ones whose mean is the mode
+approximation).
 """
 function histmode end
 
@@ -222,31 +226,31 @@ function selectparams(fname, K...; verbosity=0)
         # ones that fulfill our `K` condition).
         df_sel = subset(df, :K => K_ -> K_ .∈ Ref(K))
 
-        df_sel_mean = combine(
+        df_sel_mode = combine(
             groupby(df_sel, [:DX, :rate_coverage_min, :K]),
             nrow => :count,
             [:spread_min, :a, :b] =>
                 ((s, a, b) -> histmode((; spread_min=s, a=a, b=b))) =>
                     AsTable,
         )
-        df_sel_mean = sort(df_sel_mean)
+        df_sel_mode = sort(df_sel_mode)
 
-        df_sel_mean[!, :Beta] = Beta.(df_sel_mean.a, df_sel_mean.b)
+        df_sel_mode[!, :Beta] = Beta.(df_sel_mode.a, df_sel_mode.b)
 
-        df_sel_mean[!, :Beta_mean] = mean.(df_sel_mean.Beta)
+        df_sel_mode[!, :Beta_mean] = mean.(df_sel_mode.Beta)
 
-        df_sel_mean[!, :Beta_var] = var.(df_sel_mean.Beta)
+        df_sel_mode[!, :Beta_var] = var.(df_sel_mode.Beta)
 
-        df_sel_mean[!, :Beta_std] = std.(df_sel_mean.Beta)
+        df_sel_mode[!, :Beta_std] = std.(df_sel_mode.Beta)
 
         # This is simply the formula from `Intervals.draw_spread`.
-        df_sel_mean[!, :spread_mean] =
-            df_sel_mean.spread_min .+
-            mean.(df_sel_mean.Beta) .* (0.5 .- df_sel_mean.spread_min)
+        df_sel_mode[!, :spread_mean] =
+            df_sel_mode.spread_min .+
+            mean.(df_sel_mode.Beta) .* (0.5 .- df_sel_mode.spread_min)
 
-        select!(df_sel_mean, Not(:Beta))
+        select!(df_sel_mode, Not(:Beta))
 
-        return df_sel_mean
+        return df_sel_mode
     end
 end
 
