@@ -171,5 +171,32 @@ as the original file but extension `.selection.csv`).
     )
     println()
 
+    # Show how large the posterior samples are for each combination of `K` and
+    # `DX` for each `rate_coverage_min`.
+    display(
+        draw(
+            data(subset(df_sel, :rate_coverage_min => r -> r .== 0.9)) *
+            mapping(
+                :K;
+                layout=:DX => nonnumeric,
+                # row=:K => nonnumeric,
+                # color=:rate_coverage_min => nonnumeric,
+                # dodge=:rate_coverage_min => nonnumeric,
+            ) *
+            frequency();
+            # axis=(; yscale=log10),
+        );
+    )
+    println()
+    display(
+        combine(
+            groupby(
+                subset(df_sel, :rate_coverage_min => r -> r .== 0.9),
+                [:DX, :K],
+            ),
+            nrow,
+        ),
+    )
+
     return nothing
 end
