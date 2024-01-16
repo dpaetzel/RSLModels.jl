@@ -161,6 +161,30 @@ let
         end
     end
 
+    @testset "biasedwindow_bounds" begin
+        rng = Random.Xoshiro(123)
+
+        for _ in 1:100
+            len_best = rand(rng, 1:30)
+            width_window = rand(rng, [5, 7, 9])
+            bias_window = rand(rng) * 5 - 2.5
+            size_pop = rand(rng, [8, 16, 32])
+            len_lbound, len_ubound = GARegressors.biasedwindow_bounds(
+                len_best,
+                width_window,
+                bias_window,
+                size_pop,
+            )
+
+            lengths = collect(len_lbound:len_ubound)
+            @test length(lengths) <= size_pop / 2
+
+            # Check whether the vector is sorted and does not contain
+            # duplicates.
+            @test all(lengths .>= 1)
+        end
+    end
+
     @testset "mutate_bounds" begin
         rng = Random.Xoshiro(123)
 

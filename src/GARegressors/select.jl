@@ -237,3 +237,36 @@ function select_trnmt(
     report = (;)
     return selection, report
 end
+
+"""
+Compute bounds of the biased window.
+"""
+function biasedwindow_bounds(len_best, width_window, bias_window, size_pop)
+    # (4) in ryerkerk2020.
+    len_lbound =
+        min(Int(ceil(len_best - width_window / 2 + bias_window)), len_best)
+    len_ubound =
+        max(Int(floor(len_best + width_window / 2 + bias_window)), len_best)
+    # ryerkerk2020's code says “winStart(winStart < 1 ) = 1; % Make sure the
+    # window doesn't start at a length less than 1.”.
+    len_lbound = max(len_lbound, 1)
+
+    # ryerkerk2020: “In our implemented code the stretch was limited such that
+    # the window can only contain a maximum of [`size_pop/2`] solution lengths.”
+    #
+    # ryerkerk2020's code fulfills this by repeatedly removing the niche that is
+    # furthest from the current best solution's length.
+    #
+    # The `+1` is required because the range is inclusive.
+    while len_ubound - len_lbound + 1 > size_pop / 2
+        # TODO This assumes that len_lbound <= len_best (analogously for
+        # len_ubound)
+        if len_best - len_lbound > len_ubound - len_best
+            len_lbound += 1
+        else
+            len_ubound -= 1
+        end
+    end
+
+    return len_lbound, len_ubound
+end

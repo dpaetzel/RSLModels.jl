@@ -303,21 +303,19 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
             )
         n_eval += length(offspring)
 
-        # (4) in ryerkerk2020.
-        len_lbound = min(
-            Int(ceil(len_best - config.select_width_window / 2 + bias_window)),
+        len_lbound, len_ubound = biasedwindow_bounds(
             len_best,
+            config.select_width_window,
+            bias_window,
+            config.size_pop,
         )
-        len_ubound = max(
-            Int(
-                floor(len_best + config.select_width_window / 2 + bias_window),
-            ),
-            len_best,
-        )
-        lengths = collect(len_lbound:len_ubound)
 
-        selection, report =
-            select(rng, vcat(pop, offspring), config.size_pop, lengths)
+        selection, report = select(
+            rng,
+            vcat(pop, offspring),
+            config.size_pop,
+            collect(len_lbound:len_ubound),
+        )
         pop[:] = selection
 
         idx_best = fittest_idx(pop)
