@@ -2,7 +2,7 @@
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "03d8a3eedde0fbf27f7327408c5f612acf2a77ef"
+project_hash = "268b9dcd7e8342934d53f49c3e6606e23d0a8721"
 
 [[deps.ARFFFiles]]
 deps = ["CategoricalArrays", "Dates", "Parsers", "Tables"]
@@ -226,6 +226,11 @@ version = "1.0.0"
 [[deps.Dates]]
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
+
+[[deps.DeepDiffs]]
+git-tree-sha1 = "9824894295b62a6a4ab6adf1c7bf337b3a9ca34c"
+uuid = "ab62b9b5-e342-54a8-a765-a90f495de1a6"
+version = "1.2.0"
 
 [[deps.DefineSingletons]]
 git-tree-sha1 = "0fba8b706d0178b4dc7fd44a96a92382c9065c2c"
@@ -1025,6 +1030,12 @@ version = "1.10.0"
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[[deps.TestSetExtensions]]
+deps = ["DeepDiffs", "Distributed", "Test"]
+git-tree-sha1 = "3a2919a78b04c29a1a57b05e1618e473162b15d0"
+uuid = "98d24dd4-01ad-11ea-1b02-c9a08f80db04"
+version = "2.0.0"
 
 [[deps.TranscodingStreams]]
 git-tree-sha1 = "1fbeaaca45801b4ba17c251dd8603ef24801dd84"

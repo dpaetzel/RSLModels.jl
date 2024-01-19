@@ -58,4 +58,17 @@ let
             @test true
         end
     end
+
+    # TODO https://github.com/alan-turing-institute/MLJ.jl/issues/1074#issuecomment-1875997215
+    # using MLJTestInterface
+    # @testset "generic mlj interface test" begin
+    #     fails, summary = MLJTestInterface.test(
+    #         [BetaML.Utils.AutoEncoderMLJ],
+    #         MLJTestInterface.make_regression()[1];
+    #         mod=@__MODULE__,
+    #         verbosity=0, # bump to debug
+    #         throw=false, # set to true to debug
+    #     )
+    #     @test isempty(failures)
+    # end
 end

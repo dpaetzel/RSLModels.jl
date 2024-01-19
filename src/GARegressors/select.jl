@@ -52,7 +52,10 @@ function select(
         append!(selection, selection_filler)
     end
 
-    @assert length(selection) == n_select "$(length(selection)), $n_select"
+    @assert length(selection) == n_select "select(…, pop of length " *
+                                          "$(length(pop)), $n_select, " *
+                                          "$lengths) yields selection of " *
+                                          "length $(length(selection))"
 
     report = (;)
     return selection, report

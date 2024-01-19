@@ -173,6 +173,24 @@ distances requires some compute.
    include("scripts/analyse-runbest.jl")
    ```
    
+
+## Testing
+
+
+To run all tests:
+
+```
+julia --project=.
+] test
+```
+
+
+To run only the tests in `test/select.jl` and `test/ga.jl`:
+
+```
+import Pkg; Pkg.test(;test_args=["select", "ga"])
+```
+   
    
 ## Citing
 
