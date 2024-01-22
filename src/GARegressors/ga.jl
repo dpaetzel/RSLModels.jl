@@ -114,6 +114,10 @@ struct GAResult
     pop_rest::AbstractVector{EvaluatedGenotype}
 end
 
+function fitness(result::GAResult)
+    return result.best.fitness
+end
+
 """
 Runs the GA based on the given config and training data.
 """
