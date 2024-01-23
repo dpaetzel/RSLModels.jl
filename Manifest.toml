@@ -2,7 +2,7 @@
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "154a5b9404ccd8498fb435068615b3617fb5e942"
+project_hash = "2a0bcfd85ce723a7a8bbac6872c1a6a15cdd4e2b"
 
 [[deps.ARFFFiles]]
 deps = ["CategoricalArrays", "Dates", "Parsers", "Tables"]
@@ -1036,9 +1036,9 @@ version = "0.9.12"
 
 [[deps.KernelDensity]]
 deps = ["Distributions", "DocStringExtensions", "FFTW", "Interpolations", "StatsBase"]
-git-tree-sha1 = "90442c50e202a5cdf21a7899c66b240fdef14035"
+git-tree-sha1 = "fee018a29b60733876eb557804b5b109dd3dd8a7"
 uuid = "5ab0869b-81aa-558d-bb23-cbf5423bbe9b"
-version = "0.6.7"
+version = "0.6.8"
 
 [[deps.KittyTerminalImages]]
 deps = ["Base64", "Cairo", "CodecZlib", "ImageCore", "Interpolations", "PNGFiles", "Requires", "Rsvg"]

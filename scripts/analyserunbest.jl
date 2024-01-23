@@ -1,13 +1,16 @@
 using AlgebraOfGraphics
 using CairoMakie
+using ColorSchemes
 using DataFrames
 using KittyTerminalImages
 using LaTeXStrings
 using Latexify
 using MLFlowClient
+using MLJ
 using RSLModels
 using Serialization
 using Statistics
+RidgeRegressor = @load RidgeRegressor pkg = MLJLinearModels
 
 # using MathTeXEngine
 # textheme = Theme(;
@@ -175,17 +178,20 @@ function graphs(df)
             "metrics.sim" => L"d_X(\mathcal{M}, \mathcal{M}_0)";
             # row="task.K" => (k -> k_sorter(L"K=%$k")),
             row="task.K" => (k -> k_sorter_("K=$k")),
+            # linestyle="params.algorithm",
             # linestyle="params.algorithm.class",
             # linestyle="params.algorithm.class" => alg_sorter => "Algorithm",
+            # linestyle="params.algorithm.class" => alg_sorter => "Algorithm",
             # linestyle=:dash,
+            # linestyle=[:solid, :dash, :dot],
         ) *
         # mapping(; linestyle="params.algorithm.class" => alg_sorter => "Algorithm")
         coloralg *
         coldx *
-        visual(ECDFPlot; linewidth=2, linestyle=:dash)
+        visual(ECDFPlot; linewidth=1)
     fig = draw(
         plt;
-        axis=(; ylabel="Density"),
+        axis=(; ylabel="Density", xscale=log10),
         facet=(; linkxaxes=:none),
         figure=(; resolution=(1100, 1000)),
     )
@@ -203,10 +209,10 @@ function graphs(df)
         # rowcover *
         coloralg *
         coldx *
-        visual(ECDFPlot; linewidth=2, linestyle=:dash)
+        visual(ECDFPlot; linewidth=1)
     fig = draw(
         plt;
-        axis=(; ylabel="Density"),
+        axis=(; ylabel="Density", xscale=log10),
         facet=(; linkxaxes=:none),
         figure=(; resolution=(1100, 1000)),
     )
@@ -226,14 +232,15 @@ function graphs(df)
     display(fig)
     println()
 
-    fig =
+    fig = draw(
         data(df) *
         mapping("task.rate_coverage") *
         coldx *
         (
             histogram(; bins=50, normalization=:pdf) +
             AlgebraOfGraphics.density()
-        ) |> draw
+        ),
+    )
     CairoMakie.save("plots/coveragehist.pdf", fig)
     display(fig)
     println()
@@ -256,248 +263,73 @@ function graphs(df)
     return nothing
 end
 
-function stats(df)
-    grp = ["task.DX", "task.K", "task.rate_coverage_bin"]
-    df_ = sort(
-        transform(
-            combine(
-                groupby(
-                    # Only keep one entry per task.
-                    combine(groupby(df, ["task.hash", grp...]), nrow),
-                    grp,
-                ),
-                nrow,
-            ),
-            "task.rate_coverage_bin" =>
-                (
-                    r ->
-                        replace.(
-                            r,
-                            r"^.*<.*$" => L"<",
-                            r"^.*geq.*$" => L"\geq",
-                        )
-                ) => "task.rate_coverage_bin",
-        ),
-    )
+function computecost(df)
+    # This is in seconds because the @timed macro returns seconds for its :time field.
+    df[!, "metrics.duration_sim"] =
+        getproperty.(df[:, "metrics.computesimresult"], :time)
 
-    df_summary = combine(
-        groupby(df_, ["task.DX", "task.K"]),
-        "task.DX" => (dx -> dx[1]),
-        "task.K" => (k -> k[1]),
-        "nrow" =>
-            (
-                nr -> length(nr) == 2 ? "$(nr[1])/$(nr[2])" : "$(nr[1])/0"
-            ) => "Number of tasks",
-        ;
-        keepkeys=false,
-    )
+    df[!, "metrics.K_bin"] = Int.(floor.(df[!, "metrics.K"] ./ 100)) * 100
 
-    println(tolatex(df_summary))
+    df[!, "metrics.pairings"] = df[:, "task.K"] .* (df[:, "metrics.K"])
 
-    mu = combine(df_, "nrow" => mean)
-    println("Mean nrow: $mu")
-
-    total = combine(df_, "nrow" => sum)
-    println("Total: $total")
-
-    println(
-        tolatex(
-            combine(
-                groupby(df, "params.algorithm"),
-                "metrics.K" =>
-                    (k -> round(mean(k); digits=1)) => "metrics.K_mean",
-                "metrics.K" =>
-                    (k -> round(std(k); digits=1)) => "metrics.K_std",
-            ),
-        ),
-    )
-
-    println(
-        tolatex(
-            combine(
-                groupby(
-                    subset(df, "task.DX" => (dx -> dx .== 8)),
-                    "params.algorithm",
-                ),
-                "metrics.K" =>
-                    (k -> round(mean(k); digits=1)) => "metrics.K_mean",
-                "metrics.K" =>
-                    (k -> round(std(k); digits=1)) => "metrics.K_std",
-            ),
-        ),
-    )
-
-    return nothing
-end
-
-function tolatex(df)
-    return join(join.(Vector.(eachrow(df)), "  &  "), "\\\\\n") * "\\\\"
-end
-
-function todo()
-    data(df) * mapping("metrics.sim") * histogram(; bins=30) |> draw |> display
-    data(df) * mapping("metrics.sim") * histogram(; bins=100) |>
-    draw |>
-    display
-    data(df) *
-    mapping(
-        "metrics.sim" => L"d_X(a, b)";
-        color="params.algorithm",
-        layout="params.algorithm" => nonnumeric,
-    ) *
-    histogram(; bins=100) |>
-    draw |>
-    display
-
-    data(df) *
-    mapping(
-        "metrics.sim" => L"d_X(a, b)";
-        row="params.algorithm",
-        color="params.algorithm",
-    ) *
-    coldx *
-    histogram(; bins=70) |>
-    draw |>
-    display
-
-    data(df) *
-    mapping(
-        "metrics.sim" => L"d_X(a, b)";
-        row="task.rate_coverage_min" => nonnumeric,
-        color="params.algorithm",
-    ) *
-    coldx *
-    visual(ECDFPlot) |>
-    draw |>
-    display
-
-    display(
-        draw(
-            data(subset(df, "task.rate_coverage_min" => (r -> r .>= 0.9))) *
-            mapping(
-                "metrics.sim" => L"d_X(a, b)";
-                row="task.K" => nonnumeric,
-                color="params.algorithm",
-            ) *
-            coldx *
-            visual(ECDFPlot; linewidth=2);
-        ),
-    )
-
-    display(
-        draw(
-            data(subset(df, "task.rate_coverage_min" => (r -> r .< 0.9))) *
-            mapping(
-                "metrics.sim" => L"d_X(a, b)";
-                row="task.K" => nonnumeric,
-                color="params.algorithm",
-            ) *
-            coldx *
-            visual(ECDFPlot; linewidth=2);
-            palettes=(; color=ColorSchemes.seaborn_colorblind.colors),
-        ),
-    )
-
-    display(
-        draw(
-            data(df) *
-            mapping(
-                "metrics.sim" => L"d_X(a, b)";
-                row="task.rate_coverage_min" => nonnumeric,
-                color="params.algorithm",
-            ) *
-            coldx *
-            visual(ECDFPlot; linewidth=2);
-            palettes=(; color=ColorSchemes.seaborn_colorblind.colors),
-        ),
-    )
-
-    display(
-        draw(
-            data(df) *
-            mapping(
-                "metrics.mae.test" => "MAE.test";
-                row="task.rate_coverage_min" => nonnumeric,
-                color="params.algorithm",
-                linestyle="params.algorithm",
-            ) *
-            coldx *
-            visual(ECDFPlot; linewidth=2);
-            facet=(; linkxaxes=:none),
-            palettes=(; color=ColorSchemes.seaborn_colorblind.colors),
-        ),
-    )
-
-    # Add an index to each data set which counts up for each DX/K/rate_coverage_min
-    # triple.
-    df = combine(
-        groupby(df, ["task.DX", "task.K", "task.rate_coverage_min"]),
-        All(),
-        "task.hash" =>
-            (
-                hashs ->
-                    get.(
-                        Ref(Dict(unique(hashs) .=> 1:length(unique(hashs)))),
-                        hashs,
-                        missing,
-                    )
-            ) => "idx_data",
-    )
-
-    data(df) *
-    mapping(
-        "task.K";
-        # 9 algorithms, 10 repetitions.
-        # "nrow" => (n -> n / 9 / 10);
-        row="task.rate_coverage_min" => nonnumeric,
-    ) *
-    coldx *
-    frequency() |>
-    draw |>
-    display
-    # visual(ScatterLines) |> draw
-    # visual(ScatterLines) |> draw
-
-    df_summary = combine(
-        groupby(
-            df,
-            [
-                "task.DX",
-                "task.K",
-                "task.rate_coverage_min",
-                "idx_data",
-                "task.hash",
-                "params.algorithm",
-            ],
-        ),
-        # All(),
-        # "params.data.hash" =>
-        #     (hashs -> collect(1:length(hashs))) => "idx_data",
-        # "idx_data",
-        # "task.K",
-        # "task.rate_coverage_min",
-        "metrics.K" => mean,
-        "metrics.K" => median,
-        "metrics.K" => std,
-        "metrics.sim" => mean,
-        "metrics.sim" => median,
-        "metrics.sim" => std,
-    )
-
-    plt =
-        data(
-            subset(df_summary, "task.rate_coverage_min" => (r -> r .== 0.9)),
+    draw(
+        data(df) *
+        mapping(
+            "metrics.duration_sim";
+            col="metrics.K_bin" => nonnumeric,
+            row="task.K" => nonnumeric,
         ) *
-        mapping(; color="params.algorithm", row="task.K" => nonnumeric) *
-        coldx *
-        (
-            mapping(
-                "idx_data" => nonnumeric,
-                "metrics.sim_mean" => abs => L"d_X(a, b)",
-            ) * visual(ScatterLines)
-        )
-    # draw(plt; axis=(yscale=log10,), figure=(resolution=(1500, 1000),))
-    draw(plt; axis=(), figure=(resolution=(1500, 1000),)) |> display
+        AlgebraOfGraphics.density(),
+    )
 
-    return nothing
+    for N in unique(df[:, "task.data.N"])
+        dfsub = subset(df, "task.data.N" => (n -> n .== N))
+        df_time = combine(
+            # groupby(df, ["metrics.K_bin", "task.K"]),
+            groupby(dfsub, ["metrics.pairings"]),
+            # "metrics.pairings",
+            "metrics.duration_sim" => mean,
+            "metrics.duration_sim" => std,
+            nrow,
+        )
+
+        display(df_time)
+
+        X = (; npairings=dfsub[:, "metrics.pairings"])
+        # Ugly but whatever.
+        X = coerce(X, "npairings" => Continuous)
+        y = dfsub[:, "metrics.duration_sim"]
+        mach = machine(RidgeRegressor(; fit_intercept=false), X, y)
+        fit!(mach)
+        ypred = predict(mach, X)
+        println("MAE: ", mae(ypred, y))
+        println("R²: ", rsquared(ypred, y))
+
+        fig = Figure()
+        ax = Axis(fig[1, 1])
+
+        draw!(
+            ax,
+            data(df_time) * (
+                mapping(
+                    "metrics.pairings",
+                    "metrics.duration_sim_mean";
+                    color="nrow" => log => "Log of number of observations",
+                    # color="task.data.N",
+                    # glowwidth="nrow" => log10,
+                    # markersize="nrow",
+                ) * visual(Scatter; marker='+')
+                # mapping(
+                #     "metrics.pairings",
+                #     "metrics.duration_sim_mean",
+                #     "metrics.duration_sim_std",
+                # ) * visual(Errorbars; color=:green)
+            ),
+        )
+        fparams = fitted_params(mach)
+        ablines!(ax, 0, Dict(fparams.coefs)[:npairings])
+        println("|X| = $N")
+        display(current_figure())
+        println(fparams)
+    end
 end
