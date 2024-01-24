@@ -26,7 +26,7 @@ end
 A log-likelihood–based fitness, i.e. fitness corresponds to
 
 ```math
-log \\prod_i p(y_i | θ, X_i) = \\sum_i log p(y_i | θ, X_i)
+\\log \\prod_i p(y_i | θ, X_i) = \\sum_i \\log p(y_i | θ, X_i)
 ```
 
 where `X`, `y` is the training data and `θ` are the model parameters.
@@ -36,9 +36,36 @@ struct LikelihoodFitness <: FitnessEvaluation
     y::YType
 end
 
+"""
+A log-posterior-probability-based fitness, i.e. fitness corresponds to
+
+```math
+\\log (p(θ) \\prod_i p(y_i | θ, X_i)) = \\log p(θ) + \\sum_i \\log p(y_i | θ, X_i)
+```
+
+where p(θ) is the prior on the model parameters. In our case, it has a Negative
+Binomial distribution that depends solely on the number of rules in the model
+
+```math
+p(θ) = p(K) = NegativeBinomial(2, 0.2)
+```
+
+This encodes the following beliefs:
+
+- mean: 8.0
+- mode: 4
+- central 50%: [3, 11]
+- central 80%: [1, 16]
+- central 95%: [1, 20]
+- last 5%: [20, ∞)
+"""
+struct PosteriorFitness <: FitnessEvaluation
+    X::XType
+    y::YType
+end
+
 # TODO Add more fitness evaluation schemes
 # TODO struct CVFitness <: FitnessEvaluation end
-# TODO struct MAPFitness <: FitnessEvaluation end
 
 """
 Define a fitness measure based on a given `FitnessEvaluation` scheme.
@@ -72,6 +99,17 @@ function mkffunc(fiteval::LikelihoodFitness)
     function _cost(phenotype)
         y_dist = output_dist(phenotype, fiteval.X)
         return sum(logpdf.(y_dist, fiteval.y))
+    end
+
+    return _cost
+end
+
+function mkffunc(fiteval::PosteriorFitness)
+    prior = NegativeBinomial(2, 0.2)
+    function _cost(phenotype)
+        y_dist = output_dist(phenotype, fiteval.X)
+        likelihood = sum(logpdf.(y_dist, fiteval.y))
+        return likelihood + logpdf(prior, length(phenotype.conditions))
     end
 
     return _cost

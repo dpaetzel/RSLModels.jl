@@ -54,8 +54,8 @@ function MMI.clean!(m::GARegressor)
     warning *= fixparamdomain!(
         m,
         :fiteval,
-        x -> x ∈ [:mae, :dissimilarity, :likelihood],
-        "one of {:mae, :dissimilarity, :likelihood}",
+        x -> x ∈ [:mae, :dissimilarity, :likelihood, :posterior],
+        "one of {:mae, :dissimilarity, :likelihood, :posterior}",
     )
 
     if m.fiteval == :dissimilarity && !(m.dgmodel isa Models.Model)

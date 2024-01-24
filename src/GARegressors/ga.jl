@@ -144,6 +144,8 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         ffunc = mkffunc(DissimFitness(config.dgmodel, X))
     elseif config.fiteval == :likelihood
         ffunc = mkffunc(LikelihoodFitness(X, y))
+    elseif config.fiteval == :posterior
+        ffunc = mkffunc(PosteriorFitness(X, y))
     else
         throw(
             ArgumentError(

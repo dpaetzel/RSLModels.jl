@@ -33,7 +33,7 @@ end
 params_default = Dict(
     :n_iter => 100,
     :size_pop => 32,
-    :fiteval => :mae,
+    :fiteval => :posterior,
     :dgmodel => nothing,
     # TODO Should I use GLOBAL_RNG here?
     :rng => Random.default_rng(),
