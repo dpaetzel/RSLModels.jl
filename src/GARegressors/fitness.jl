@@ -76,41 +76,41 @@ returning a single floating point number.
 function mkffunc end
 
 function mkffunc(fiteval::MAEFitness)
-    function _cost(phenotype)
+    function _fitness(phenotype)
         y_pred = output_mean(phenotype, fiteval.X)
         return -mae(y_pred, fiteval.y)
     end
 
-    return _cost
+    return _fitness
 end
 
 function mkffunc(fiteval::DissimFitness)
-    function _cost(phenotype)
+    function _fitness(phenotype)
         return similarity(
             fiteval.model.conditions,
             phenotype.conditions;
             simf=simf_traversal_count_root(fiteval.X),
         )
     end
-    return _cost
+    return _fitness
 end
 
 function mkffunc(fiteval::LikelihoodFitness)
-    function _cost(phenotype)
+    function _fitness(phenotype)
         y_dist = output_dist(phenotype, fiteval.X)
         return sum(logpdf.(y_dist, fiteval.y))
     end
 
-    return _cost
+    return _fitness
 end
 
 function mkffunc(fiteval::PosteriorFitness)
     prior = NegativeBinomial(2, 0.2)
-    function _cost(phenotype)
+    function _fitness(phenotype)
         y_dist = output_dist(phenotype, fiteval.X)
         likelihood = sum(logpdf.(y_dist, fiteval.y))
         return likelihood + logpdf(prior, length(phenotype.conditions))
     end
 
-    return _cost
+    return _fitness
 end
