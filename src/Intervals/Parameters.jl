@@ -194,14 +194,18 @@ files to be merged.
 - `K`: Target numbers of conditions to be generate with the selected parameters.
 - `verbosity::Int=0`:
 """
-function selectparams(fname, K...; verbosity=0)
+function selectparams(fname, K...; verbosity=0, unsafe=false)
     # For medium-sized samples it seems to be several seconds cheaper to hash
     # the CSV files and check whether we computed the corresponding `DataFrame`
     # already instead of recomputing the `DataFrame`. This comes in especially
     # handy when doing hyperparameter optimization (note that it's complicated
     # to pass the `DataFrame` as an argument to the learning algorithm right
     # now because of JSON serialization and stuff).
-    hash = hashpath(fname)
+    hash = if !unsafe
+        hashpath(fname)
+    else
+        fname
+    end
     # Try to get the key or if it is not present, compute the do block, store
     # the key with its result and then return the result.
     get!(CACHE, (hash, K)) do

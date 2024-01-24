@@ -10,6 +10,7 @@ mutable struct GARegressor <: MMI.Probabilistic
     # Initialization parameters.
     init::Symbol
     init_sample_fname::String
+    init_unsafe::Bool
     init_length_min::Int
     init_length_max::Int
     init_spread_min::Float64
@@ -34,6 +35,7 @@ params_default = Dict(
     :size_pop => 32,
     :fiteval => :mae,
     :dgmodel => nothing,
+    # TODO Should I use GLOBAL_RNG here?
     :rng => Random.default_rng(),
     :x_min => Intervals.X_MIN,
     :x_max => Intervals.X_MAX,
@@ -41,6 +43,7 @@ params_default = Dict(
     # Initialization parameters.
     :init => :inverse,
     :init_sample_fname => "kdata",
+    :init_unsafe => false,
     :init_length_min => 1,
     :init_length_max => 30,
     :init_spread_min => 0.0,
@@ -72,6 +75,7 @@ function GARegressor(;
     # Initialization parameters.
     init=params_default[:init],
     init_sample_fname=params_default[:init_sample_fname],
+    init_unsafe=params_default[:init_unsafe],
     init_length_min=params_default[:init_length_min],
     init_length_max=params_default[:init_length_max],
     init_spread_min=params_default[:init_spread_min],
@@ -102,6 +106,7 @@ function GARegressor(;
         # Initialization parameters.
         init,
         init_sample_fname,
+        init_unsafe,
         init_length_min,
         init_length_max,
         init_spread_min,
@@ -144,6 +149,10 @@ end
   `init=:inverse` then this specifies the CSV file (or the folder of CSV files,
   see `RSLModels.Intervals.Parameters.selectparams`) that contains the joint
   distribution sample to use. See `init`.
+- `init_unsafe::String=$(params_default[:init_unsafe])`: If `true`, the CSV
+  file(s) of `init_sample_fname` are cashed based on the file name only. If
+  `false`, they are cached based on their contents (slower). See
+  the `Intervals.Parameters.selectparams` implementation for details.
 - `init_length_min::Int=$(params_default[:init_length_min])`: Shortest solution
   length to use during random initialization. Note that due to the probabilistic
   nature of initialization and the way that the remaining initialization

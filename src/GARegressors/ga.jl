@@ -165,6 +165,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
             config.init_sample_fname,
             lens...;
             verbosity=verbosity - 1,
+            unsafe=config.init_unsafe,
         )
         # TODO Make coverage configurable (but then we need to ensure that the
         # sample contains that coverage)
