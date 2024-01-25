@@ -8,7 +8,7 @@ abstract type FitnessEvaluation end
 """
 A mean absolute error–based fitness evaluation scheme.
 """
-struct MAEFitness <: FitnessEvaluation
+struct NegMAEFitness <: FitnessEvaluation
     X::XType
     y::YType
 end
@@ -17,7 +17,7 @@ end
 An idealized dissimilarity-to-data-generating-process–based fitness evaluation
 scheme.
 """
-struct DissimFitness <: FitnessEvaluation
+struct SimFitness <: FitnessEvaluation
     model::Models.Model
     X::XType
 end
@@ -75,7 +75,7 @@ returning a single floating point number.
 """
 function mkffunc end
 
-function mkffunc(fiteval::MAEFitness)
+function mkffunc(fiteval::NegMAEFitness)
     function _fitness(phenotype)
         y_pred = output_mean(phenotype, fiteval.X)
         return -mae(y_pred, fiteval.y)
@@ -84,7 +84,7 @@ function mkffunc(fiteval::MAEFitness)
     return _fitness
 end
 
-function mkffunc(fiteval::DissimFitness)
+function mkffunc(fiteval::SimFitness)
     function _fitness(phenotype)
         return similarity(
             fiteval.model.conditions,

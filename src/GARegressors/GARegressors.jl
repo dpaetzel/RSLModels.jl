@@ -54,14 +54,14 @@ function MMI.clean!(m::GARegressor)
     warning *= fixparamdomain!(
         m,
         :fiteval,
-        x -> x ∈ [:mae, :dissimilarity, :likelihood, :posterior],
-        "one of {:mae, :dissimilarity, :likelihood, :posterior}",
+        x -> x ∈ [:negmae, :similarity, :likelihood, :posterior],
+        "one of {:negmae, :similarity, :likelihood, :posterior}",
     )
 
-    if m.fiteval == :dissimilarity && !(m.dgmodel isa Models.Model)
+    if m.fiteval == :similarity && !(m.dgmodel isa Models.Model)
         throw(
             DomainError(
-                "In order to use dissimilarity-based fitness, you have to " *
+                "In order to use similarity-based fitness, you have to " *
                 "provide a data-generating model",
             ),
         )

@@ -7,7 +7,7 @@ using RSLModels.Transformers
 let
     Xmat, y = rand(300, 5), rand(300)
     X = MLJ.table(Xmat)
-    ffunc = GARegressors.mkffunc(GARegressors.MAEFitness(Xmat, y))
+    ffunc = GARegressors.mkffunc(GARegressors.NegMAEFitness(Xmat, y))
     config = GARegressor(;
         x_min=0.0,
         x_max=1.0,

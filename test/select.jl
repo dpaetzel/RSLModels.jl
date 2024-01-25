@@ -14,7 +14,7 @@ let
     randpop(rng, lens) = randsol.(Ref(rng), lens)
     x_min = Intervals.X_MIN
     x_max = Intervals.X_MAX
-    ffunc = GARegressors.mkffunc(GARegressors.MAEFitness(X, y))
+    ffunc = GARegressors.mkffunc(GARegressors.NegMAEFitness(X, y))
     @testset "trnmt_plan" begin
         rng = Random.Xoshiro(123)
         for size_subpop in 1:11

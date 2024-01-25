@@ -131,17 +131,17 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
 
     rng = config.rng isa Int ? MersenneTwister(config.rng) : config.rng
 
-    if config.fiteval == :mae
-        ffunc = mkffunc(MAEFitness(X, y))
-    elseif config.fiteval == :dissimilarity
+    if config.fiteval == :negmae
+        ffunc = mkffunc(NegMAEFitness(X, y))
+    elseif config.fiteval == :similarity
         if config.dgmodel == nothing
             throw(
                 ArgumentError(
-                    "dgmodel != nothing required for fiteval == :dissimilarity",
+                    "dgmodel != nothing required for fiteval == :similarity",
                 ),
             )
         end
-        ffunc = mkffunc(DissimFitness(config.dgmodel, X))
+        ffunc = mkffunc(SimFitness(config.dgmodel, X))
     elseif config.fiteval == :likelihood
         ffunc = mkffunc(LikelihoodFitness(X, y))
     elseif config.fiteval == :posterior

@@ -16,7 +16,7 @@ let
     randpop(rng, lens) = randsol.(Ref(rng), lens)
     x_min = Intervals.X_MIN
     x_max = Intervals.X_MAX
-    ffunc = GARegressors.mkffunc(GARegressors.MAEFitness(X, y))
+    ffunc = GARegressors.mkffunc(GARegressors.NegMAEFitness(X, y))
     config = GARegressor(;
         x_min=0.0,
         x_max=1.0,
@@ -208,7 +208,7 @@ let
     @testset "runga" begin
         rng = Random.Xoshiro(123)
 
-        for fiteval in [:mae, :dissimilarity, :likelihood]
+        for fiteval in [:negmae, :similarity, :likelihood, :posterior]
             let config = deepcopy(config)
                 config.rng = rng
                 config.fiteval = fiteval
