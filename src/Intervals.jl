@@ -16,6 +16,7 @@ export Interval,
     dimensions,
     draw_interval,
     draw_intervals,
+    center,
     elemof,
     hull,
     intersection,
@@ -130,6 +131,13 @@ function elemof!(
         out[n] = elemof(view(X, n, :), interval)
     end
     return nothing
+end
+
+"""
+The interval's center.
+"""
+function center(interval::Interval)
+    return (interval.lbound + interval.ubound) / 2.0
 end
 
 function volume(nothing)
