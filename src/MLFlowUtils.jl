@@ -125,10 +125,12 @@ entry `k => missing` if `!in(k, keys(dict))`. This allows us to pass the
 resulting vector of dicts to `DataFrame`.
 """
 function add_missing_keys!(dicts)
-    keys_all = union(keys.(dicts)...)
-    for key in keys_all
-        for dict in dicts
-            get!(dict, key, missing)
+    if !isempty(dicts)
+        keys_all = union(keys.(dicts)...)
+        for key in keys_all
+            for dict in dicts
+                get!(dict, key, missing)
+            end
         end
     end
     return dicts
