@@ -105,8 +105,12 @@ function elemof(
     N = size(X, 1)
     K = length(intervals)
 
-    (path_out, io_out) = mktemp(tempdir())
-    out = mmap(io_out, Matrix{Bool}, (N, K))
+    if usemmap
+        (path_out, io_out) = mktemp(tempdir())
+        out = mmap(io_out, Matrix{Bool}, (N, K))
+    else
+        out = Matrix{Bool}(undef, N, K)
+    end
 
     # Outer loop should go over columns and inner loop over rows. See
     # https://docs.julialang.org/en/v1/manual/performance-tips/#man-performance-column-major
