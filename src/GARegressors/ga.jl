@@ -231,6 +231,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
     bias_window::Float64 = 0
 
     # Initialize convergence logging.
+    log_fitness_best = Vector{Float64}(undef, config.n_iter)
     log_fitness = Array{Float64}(undef, config.size_pop, config.n_iter)
     log_length = Array{Float64}(undef, config.size_pop, config.n_iter)
     log_select_bias = Vector{Float64}(undef, config.n_iter)
@@ -329,6 +330,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         best = pop[idx_best]
 
         # Log convergence metrics.
+        log_fitness_best[iter] = best.fitness
         log_fitness[:, iter] .= getproperty.(pop, :fitness)
         log_length[:, iter] .= length.(pop)
         log_select_bias[iter] = bias_window
@@ -343,6 +345,13 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
             len_best - len_best_prev +
             bias_window *
             exp(-config.select_lambda_window * sqrt(abs(bias_window)))
+
+        if iter > config.n_iter_earlystop && all(
+            log_fitness_best[(iter - config.n_iter_earlystop):(iter - 1)] .==
+            log_fitness_best[iter],
+        )
+            break
+        end
     end
 
     deleteat!(pop, idx_best)
@@ -351,11 +360,14 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         n_iter=iter,
         bias_window=bias_window,
         n_eval=n_eval,
-        log_fitness=log_fitness,
-        log_length=log_length,
-        log_select_bias=log_select_bias,
-        log_select_len_lbound=log_select_len_lbound,
-        log_select_len_ubound=log_select_len_ubound,
+        # Report only the entries up to the current iteration (relevant if
+        # stopping early).
+        log_fitness_best=log_fitness_best[1:iter],
+        log_fitness=log_fitness[:, 1:iter],
+        log_length=log_length[:, 1:iter],
+        log_select_bias=log_select_bias[1:iter],
+        log_select_len_lbound=log_select_len_lbound[1:iter],
+        log_select_len_ubound=log_select_len_ubound[1:iter],
     )
     return GAResult(best, pop), report
 end

@@ -7,6 +7,7 @@ mutable struct GARegressor <: MMI.Probabilistic
     x_min::Float64
     x_max::Float64
     nmatch_min::Int
+    n_iter_earlystop::Int
     # Initialization parameters.
     init::Symbol
     init_sample_fname::String
@@ -40,6 +41,7 @@ params_default = Dict(
     :x_min => Intervals.X_MIN,
     :x_max => Intervals.X_MAX,
     :nmatch_min => 2,
+    :n_iter_earlystop => 50,
     # Initialization parameters.
     :init => :inverse,
     :init_sample_fname => "kdata",
@@ -72,6 +74,7 @@ function GARegressor(;
     x_min=params_default[:x_min],
     x_max=params_default[:x_max],
     nmatch_min=params_default[:nmatch_min],
+    n_iter_earlystop=params_default[:n_iter_earlystop],
     # Initialization parameters.
     init=params_default[:init],
     init_sample_fname=params_default[:init_sample_fname],
@@ -103,6 +106,7 @@ function GARegressor(;
         x_min,
         x_max,
         nmatch_min,
+        n_iter_earlystop,
         # Initialization parameters.
         init,
         init_sample_fname,
@@ -135,6 +139,8 @@ end
 
 # Arguments
 
+- `n_iter_earlystop::Int=$(params_default[:n_iter_earlystop])`: Stop the GA
+  after elitist fitness did not change for this many generations.
 - `init::Symbol=$(params_default[:init])`: Which initialization method to use.
   `:inverse` means based on heuristically maximizing the density of the
   initialization parameters and requires a sample of a certain joint

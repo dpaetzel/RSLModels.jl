@@ -69,6 +69,8 @@ function MMI.clean!(m::GARegressor)
 
     warning *= fixparamdomain!(m, :nmatch_min, x -> x > 0, "positive")
 
+    warning *= fixparamdomain!(m, :n_iter_earlystop, x -> x > 0, "positive")
+
     warning *= fixparamdomain!(
         m,
         :init,
