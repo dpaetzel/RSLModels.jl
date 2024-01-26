@@ -255,8 +255,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         # column-major order.
         for (idx1, idx2) in eachcol(idx_rand)
             if rand(rng) <= config.recomb_rate
-                # TODO Gotta copy in crossover if needed
-                g1, g2, report = crossover(rng, pop[idx1], pop[idx2])
+                g1, g2, report = crossover_spatial(rng, pop[idx1], pop[idx2])
             else
                 g1, g2 = (deepcopy(pop[idx1]), deepcopy(pop[idx2]))
             end

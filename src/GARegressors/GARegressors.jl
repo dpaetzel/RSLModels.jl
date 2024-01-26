@@ -3,6 +3,7 @@ module GARegressors
 using AutoHashEquals
 using DataFrames
 using Distributions
+using LinearAlgebra
 using MLJModelInterface: MLJModelInterface
 MMI = MLJModelInterface
 using MLUtils
