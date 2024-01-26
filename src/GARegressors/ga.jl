@@ -318,6 +318,13 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
             config.size_pop,
         )
 
+        if verbosity > 0
+            @info "Selection window is " *
+                  "[$len_lbound, ($len_best), $len_ubound]. " *
+                  "Window bias is approximately " *
+                  "$(round(bias_window; digits=2))."
+        end
+
         selection, report = select(
             rng,
             vcat(pop, offspring),
