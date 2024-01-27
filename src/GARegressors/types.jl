@@ -27,8 +27,10 @@ mutable struct GARegressor <: MMI.Probabilistic
     # Recombination parameters.
     recomb_rate::Float64
     # Selection parameters.
+    select::Symbol
     select_width_window::Int
     select_lambda_window::Float64
+    select_size_tournament::Int
 end
 
 params_default = Dict(
@@ -61,8 +63,10 @@ params_default = Dict(
     # Recombination parameters
     :recomb_rate => 0.9,
     # Selection parameters.
+    :select => :lengthniching,
     :select_width_window => 7,
     :select_lambda_window => 0.004,
+    :select_size_tournament => 4,
 )
 
 function GARegressor(;
@@ -94,8 +98,10 @@ function GARegressor(;
     # Recombination parameters
     recomb_rate=params_default[:recomb_rate],
     # Selection parameters.
+    select=params_default[:select],
     select_width_window=params_default[:select_width_window],
     select_lambda_window=params_default[:select_lambda_window],
+    select_size_tournament=params_default[:select_size_tournament],
 )
     model = GARegressor(
         n_iter,
@@ -126,8 +132,10 @@ function GARegressor(;
         # Recombination parameters
         recomb_rate,
         # Selection parameters.
+        select,
         select_width_window,
         select_lambda_window,
+        select_size_tournament,
     )
     message = MMI.clean!(model)
     isempty(message) || @warn message
@@ -193,5 +201,13 @@ end
   deviation used in Gaussian condition parameter mutation in units of `x_max -
   x_min`. `mutate_rate_std==0.5` corresponds to a standard deviation of half the
   configured input space.
+- `select::Int=params_default[:select]`: Which selection operator to use. One of
+  `:lengthniching` (recommended) or `:tournament`.
+- `select_width_window::Int=params_default[:select_width_window]`: Only relevant
+  for length-niching selection.
+- `select_lambda_window::Float64=params_default[:select_lambda_window]`: Only
+  relevant for length-niching selection.
+- `select_size_tournament::Int=params_default[:select_size_tournament]`: Only
+  relevant for tournament selection.
 """
 GARegressor
