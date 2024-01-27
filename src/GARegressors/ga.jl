@@ -328,6 +328,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
 
         # We perform selection after updating the elitist because we want to use
         # the most recent `len_best`.
+        # TODO Only compute this if lengthniching is actually used
         len_lbound, len_ubound = biasedwindow_bounds(
             len_best,
             config.select_width_window,
@@ -335,19 +336,35 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
             config.size_pop,
         )
 
-        if verbosity > 0
-            @info "Selection window is " *
-                  "[$len_lbound, ($len_best), $len_ubound]. " *
-                  "Window bias is approximately " *
-                  "$(round(bias_window; digits=2))."
-        end
+        # TODO Refactor select mess
+        selection, report = if config.select == :lengthniching
+            if verbosity > 0
+                @info "Selection window is " *
+                      "[$len_lbound, ($len_best), $len_ubound]. " *
+                      "Window bias is approximately " *
+                      "$(round(bias_window; digits=2))."
+            end
 
-        selection, report = select(
-            rng,
-            pop_all,
-            config.size_pop,
-            collect(len_lbound:len_ubound),
-        )
+            select(
+                rng,
+                pop_all,
+                config.size_pop,
+                collect(len_lbound:len_ubound),
+            )
+        elseif config.select == :tournament
+            select_trnmt(
+                rng,
+                pop_all,
+                config.size_pop;
+                size_trnmt=config.select_size_tournament,
+            )
+        else
+            throw(
+                ArgumentError(
+                    "$(config.select) is not a supported selection operator",
+                ),
+            )
+        end
         pop[:] = selection
 
         # Log convergence metrics.
@@ -358,6 +375,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         log_select_len_lbound[iter] = len_lbound
         log_select_len_ubound[iter] = len_ubound
 
+        # TODO Only compute this if lengthniching is actually used
         # Update selection length niche.
         len_best_prev = len_best
         len_best = length(best)
