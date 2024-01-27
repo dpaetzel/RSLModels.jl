@@ -118,7 +118,7 @@ end
 
 struct GAResult
     best::EvaluatedGenotype
-    pop_rest::AbstractVector{EvaluatedGenotype}
+    pop_last::AbstractVector{EvaluatedGenotype}
 end
 
 function fitness(result::GAResult)
@@ -231,8 +231,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
     n_eval += length(pop)
 
     # Initialize elitist logging.
-    idx_best::Int = fittest_idx(pop)
-    best::EvaluatedGenotype = pop[idx_best]
+    best::EvaluatedGenotype = pop[fittest_idx(pop)]
     len_best::Int = length(best)
 
     # Bias factor for ryerkerk2020's biased window mechanism.
@@ -318,6 +317,17 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
             )
         n_eval += length(offspring)
 
+        pop_all = vcat(pop, offspring)
+
+        # Update elitist.
+        best_pop = pop_all[fittest_idx(pop_all)]
+        if best_pop.fitness >= best.fitness && length(best_pop) <= length(best)
+            best = best_pop
+            len_best = length(best)
+        end
+
+        # We perform selection after updating the elitist because we want to use
+        # the most recent `len_best`.
         len_lbound, len_ubound = biasedwindow_bounds(
             len_best,
             config.select_width_window,
@@ -334,14 +344,11 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
 
         selection, report = select(
             rng,
-            vcat(pop, offspring),
+            pop_all,
             config.size_pop,
             collect(len_lbound:len_ubound),
         )
         pop[:] = selection
-
-        idx_best = fittest_idx(pop)
-        best = pop[idx_best]
 
         # Log convergence metrics.
         log_fitness_best[iter] = best.fitness
@@ -368,7 +375,6 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         end
     end
 
-    deleteat!(pop, idx_best)
     report = (;
         # Actual number of iterations used.
         n_iter=iter,
