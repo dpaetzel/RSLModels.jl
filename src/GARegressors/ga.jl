@@ -146,6 +146,8 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         ffunc = mkffunc(LikelihoodFitness(X, y))
     elseif config.fiteval == :posterior
         ffunc = mkffunc(PosteriorFitness(X, y))
+    elseif config.fiteval == :NegAIC
+        ffunc = mkffunc(NegAICFitness(X, y))
     else
         throw(
             ArgumentError(

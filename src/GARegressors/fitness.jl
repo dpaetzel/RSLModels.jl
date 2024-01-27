@@ -64,6 +64,14 @@ struct PosteriorFitness <: FitnessEvaluation
     y::YType
 end
 
+"""
+A negative AICc-based fitness.
+"""
+struct NegAICFitness <: FitnessEvaluation
+    X::XType
+    y::YType
+end
+
 # TODO Add more fitness evaluation schemes
 # TODO struct CVFitness <: FitnessEvaluation end
 
@@ -108,8 +116,27 @@ function mkffunc(fiteval::PosteriorFitness)
     prior = NegativeBinomial(2, 0.2)
     function _fitness(phenotype)
         y_dist = output_dist(phenotype, fiteval.X)
-        likelihood = sum(logpdf.(y_dist, fiteval.y))
-        return likelihood + logpdf(prior, length(phenotype.conditions))
+        loglikelihood = sum(logpdf.(y_dist, fiteval.y))
+        logprior = logpdf(prior, length(phenotype.conditions))
+        return loglikelihood + logprior
+    end
+
+    return _fitness
+end
+
+function mkffunc(fiteval::NegAICFitness)
+    function _fitness(phenotype)
+        y_dist = output_dist(phenotype, fiteval.X)
+        loglikelihood = sum(logpdf.(y_dist, fiteval.y))
+        N, DX = size(fiteval.X)
+        K = length(phenotype.conditions)
+        nparams = 2 * K * DX + 2 * K
+        AICc =
+            -2 * loglikelihood +
+            2 * nparams +
+            (2 * nparams * (nparams + 1)) / (N - nparams - 1)
+        # Since fitness is maximized, we invert this.
+        return -AICc
     end
 
     return _fitness
