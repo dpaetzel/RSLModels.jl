@@ -205,6 +205,18 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         )
     end
 
+    recomb = if config.recomb == :spatial
+        crossover_spatial
+    elseif config.recomb == :cutsplice
+        crossover_cutsplice
+    else
+        throw(
+            ArgumentError(
+                "$(config.recomb) is not a supported recombination operator",
+            ),
+        )
+    end
+
     # Initialize.
     #
     # Count number of evaluations.
@@ -261,8 +273,8 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         # Iterating over columns is faster b/c of Julia arrays using
         # column-major order.
         for (idx1, idx2) in eachcol(idx_rand)
-            if rand(rng) <= config.recomb_rate
-                g1, g2, report = crossover_spatial(rng, pop[idx1], pop[idx2])
+            if rand(rng) < config.recomb_rate
+                g1, g2, report = recomb(rng, pop[idx1], pop[idx2])
             else
                 g1, g2 = (deepcopy(pop[idx1]), deepcopy(pop[idx2]))
             end

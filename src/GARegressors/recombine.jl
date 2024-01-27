@@ -1,3 +1,9 @@
+"""
+Spatial crossover operator. Draw a random plane located in the input space, then
+split each individual into two subsets of intervals based on that plane (based
+on which side of the plane the intervals' centers lie on) and perform crossover
+by recombining subsets from each side of the plane.
+"""
 function crossover_spatial end
 
 function crossover_spatial(
@@ -8,12 +14,6 @@ function crossover_spatial(
     return crossover_spatial(rng, g1.genotype, g2.genotype)
 end
 
-"""
-Spatial crossover operator. Draw a random plane located in the input space, then
-split each individual into two subsets of intervals based on that plane (based
-on which side of the plane the intervals' centers lie on) and perform crossover
-by recombining subsets from each side of the plane.
-"""
 function crossover_spatial(rng::AbstractRNG, g1::Genotype, g2::Genotype)
     g1_ = deepcopy(g1)
     g2_ = deepcopy(g2)
@@ -55,6 +55,42 @@ function crossover_spatial(rng::AbstractRNG, g1::Genotype, g2::Genotype)
         push!(offspring2, offspring1[idx_random])
         deleteat!(offspring1, idx_random)
     end
+
+    report = (;)
+    return offspring1, offspring2, report
+end
+
+"""
+Typical cut-and-splice crossover for variable-length solutions: Subdivide the
+combined metavariables (rules) of both solutions randomly between two new
+solutions.
+"""
+function crossover_cutsplice end
+
+function crossover_cutsplice(
+    rng::AbstractRNG,
+    g1::EvaluatedGenotype,
+    g2::EvaluatedGenotype,
+)
+    return crossover_cutsplice(rng, g1.genotype, g2.genotype)
+end
+
+function crossover_cutsplice(rng::AbstractRNG, g1::Genotype, g2::Genotype)
+    g1_ = deepcopy(g1)
+    g2_ = deepcopy(g2)
+
+    # Join and shuffle the rules.
+    joint = vcat(g1_, g2_)
+    shuffle!(rng, joint)
+
+    # Randomly select lengths for the two new individuals.
+    len = rand(rng, 1:(length(joint) - 1))
+
+    # TODO Choose length more intelligently (similar to old lengths? similar to
+    # mean length?)
+
+    offspring1 = joint[1:len]
+    offspring2 = joint[(len + 1):end]
 
     report = (;)
     return offspring1, offspring2, report

@@ -123,6 +123,13 @@ function MMI.clean!(m::GARegressor)
         "in [0.0, 1.0]",
     )
 
+    warning *= fixparamdomain!(
+        m,
+        :recomb,
+        x -> x ∈ [:spatial, :cutsplice],
+        "one of {:spatial, :cutsplice}",
+    )
+
     warning *=
         fixparamdomain!(m, :recomb_rate, x -> 0.0 <= x <= 1.0, "in [0.0, 1.0]")
 

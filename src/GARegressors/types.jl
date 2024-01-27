@@ -25,6 +25,7 @@ mutable struct GARegressor <: MMI.Probabilistic
     mutate_rate_mut::Float64
     mutate_rate_std::Float64
     # Recombination parameters.
+    recomb::Symbol
     recomb_rate::Float64
     # Selection parameters.
     select::Symbol
@@ -61,6 +62,7 @@ params_default = Dict(
     :mutate_rate_mut => 1.0,
     :mutate_rate_std => 0.05,
     # Recombination parameters
+    :recomb => :spatial,
     :recomb_rate => 0.9,
     # Selection parameters.
     :select => :lengthniching,
@@ -96,6 +98,7 @@ function GARegressor(;
     mutate_rate_mut=params_default[:mutate_rate_mut],
     mutate_rate_std=params_default[:mutate_rate_std],
     # Recombination parameters
+    recomb=params_default[:recomb],
     recomb_rate=params_default[:recomb_rate],
     # Selection parameters.
     select=params_default[:select],
@@ -130,6 +133,7 @@ function GARegressor(;
         mutate_rate_mut,
         mutate_rate_std,
         # Recombination parameters
+        recomb,
         recomb_rate,
         # Selection parameters.
         select,
@@ -209,5 +213,7 @@ end
   relevant for length-niching selection.
 - `select_size_tournament::Int=params_default[:select_size_tournament]`: Only
   relevant for tournament selection.
+- `recomb::Symbol=params_default[:recomb]`: Which crossover operator to use. One
+  of `:spatial` and `:cutsplice`.
 """
 GARegressor
