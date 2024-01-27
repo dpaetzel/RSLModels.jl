@@ -191,7 +191,7 @@ let
             pop, _ = GARegressors.init(rng, X, init1, config.size_pop)
 
             for g in pop
-                model = GARegressors.express(
+                model, M = GARegressors.express(
                     g,
                     X,
                     y,
@@ -208,7 +208,7 @@ let
     @testset "runga" begin
         rng = Random.Xoshiro(123)
 
-        for fiteval in [:negmae, :similarity, :likelihood, :posterior]
+        for fiteval in [:negmae, :similarity, :likelihood, :posterior, :NegAIC]
             let config = deepcopy(config)
                 config.rng = rng
                 config.fiteval = fiteval
