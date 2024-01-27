@@ -210,8 +210,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
     # Initialize pop, repair it, and then eval it.
     pop_uneval::Vector{Genotype}, report =
         init(rng, X, init1, config.size_pop; verbosity=verbosity - 1)
-    pop_uneval[:], reports =
-        unzip(repair.(Ref(rng), pop_uneval, Ref(X), Ref(config.nmatch_min)))
+    pop_uneval[:], reports = unzip(repair.(Ref(rng), pop_uneval, Ref(X)))
     pop::Vector{EvaluatedGenotype} =
         evaluate.(
             pop_uneval,
@@ -293,8 +292,8 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
                 config.x_max,
             )
 
-            g1, report = repair(rng, g1, X, config.nmatch_min)
-            g2, report = repair(rng, g2, X, config.nmatch_min)
+            g1, report = repair(rng, g1, X)
+            g2, report = repair(rng, g2, X)
 
             push!(offspring_uneval, g1)
             push!(offspring_uneval, g2)
