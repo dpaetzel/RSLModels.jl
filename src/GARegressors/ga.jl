@@ -15,6 +15,9 @@ fitness score.
     genotype::Genotype
     phenotype::Models.Model
     fitness::Float64
+    # Matching matrix from when phenotype (mixing coefficients etc.) was
+    # computed.
+    matches::Matrix{Bool}
 end
 
 function Base.length(g::EvaluatedGenotype)
@@ -39,11 +42,14 @@ function express(
     N, DX = size(X)
 
     conditions = deepcopy(genotype)
+    K = length(conditions)
 
+    M = Matrix{Bool}(undef, N, K)
     dists_out = []
     idx_rm = []
     for idx in eachindex(conditions)
-        y_matched = view(y, elemof(X, conditions[idx]))
+        M[:, idx] .= elemof(X, conditions[idx])
+        y_matched = view(y, M[:, idx])
         # TODO Expose this parameter as match_min or something like that
         # TODO Disable this test if `repair` is used
         # If too few training data points are matched, ignore the condition.
@@ -68,9 +74,10 @@ function express(
 
     # Append the default rule.
     push!(conditions, maxgeneral(DX; x_min=x_min, x_max=x_max))
+    # TODO Performance: Do not recompute this everytime, this is constant
     push!(lmodels, ConstantModel(fit_mle(Normal, y), nextfloat(0.0), true))
 
-    return Models.Model(conditions, lmodels; x_min=x_min, x_max=x_max)
+    return Models.Model(conditions, lmodels; x_min=x_min, x_max=x_max), M
 end
 
 """
@@ -85,9 +92,9 @@ function evaluate(
     ffunc::Function,
     nmatch_min::Int,
 )
-    phenotype = express(genotype, X, y, x_min, x_max, nmatch_min)
+    phenotype, M = express(genotype, X, y, x_min, x_max, nmatch_min)
     fitness = ffunc(phenotype)
-    return EvaluatedGenotype(genotype, phenotype, fitness)
+    return EvaluatedGenotype(genotype, phenotype, fitness, M)
 end
 
 function evaluate(
@@ -99,14 +106,14 @@ function evaluate(
     ffunc::Function,
     nmatch_min::Int,
 )
-    phenotype = express(solution.genotype, X, y, x_min, x_max, nmatch_min)
+    phenotype, M = express(solution.genotype, X, y, x_min, x_max, nmatch_min)
     fitness = ffunc(phenotype)
     # Note that we don't return a report for `evaluate` yet. If you want to
     # implement this, consider the fact that `evaluate` typically gets
     # broadcasted over a vector of solutions/genotypes (and we should therefore
     # specialize for instead of broadcast over a vector so that reports are
     # properly concatenated instead of returning a vector of pairs).
-    return EvaluatedGenotype(solution.genotype, phenotype, fitness)
+    return EvaluatedGenotype(solution.genotype, phenotype, fitness, M)
 end
 
 struct GAResult
