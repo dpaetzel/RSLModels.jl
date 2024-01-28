@@ -362,6 +362,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
                 pop_all,
                 config.size_pop,
                 collect(len_lbound:len_ubound),
+                len_best,
             )
         elseif config.select == :tournament
             select_trnmt(

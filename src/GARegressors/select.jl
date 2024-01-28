@@ -6,11 +6,8 @@ function select(
     pop::AbstractVector{EvaluatedGenotype},
     n_select::Int,
     lengths::AbstractVector{Int},
+    len_best::Int,
 )
-    # TODO Maybe cache this to reduce one `O(size_pop)`
-    idx_best = fittest_idx(pop)
-    len_best = length(pop[idx_best])
-
     n_niches = length(lengths)
     @debug "select: Using $n_niches niches for population of size $(length(pop))"
 
