@@ -261,8 +261,9 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
     for outer iter in 1:(config.n_iter)
         if verbosity > 0
             @info "Starting iteration $iter/$(config.n_iter) …"
-            @info "Current best individual has length $(length(best)) and " *
-                  "$(config.fiteval) fitness $(best.fitness)."
+            @info "Current best individual:\n" *
+                  "- length: $(length(best))\n" *
+                  "- fitness $(config.fiteval): $(best.fitness)"
         end
 
         # TODO Consider to speed this up by inplace mutating a fixed array
@@ -357,10 +358,9 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         # TODO Refactor select mess
         selection, report = if config.select == :lengthniching
             if verbosity > 0
-                @info "Selection window is " *
-                      "[$len_lbound, ($length(best)), $len_ubound]. " *
-                      "Window bias is approximately " *
-                      "$(round(bias_window; digits=2))."
+                @info "Selection window:\n" *
+                      "- [$len_lbound, ($(length(best))), $len_ubound]\n" *
+                      "- window bias: ≈ $(round(bias_window; digits=2))\n"
             end
 
             select(
