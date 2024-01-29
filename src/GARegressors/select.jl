@@ -23,7 +23,7 @@ function select(
         if len in lens_closest
             size_niche[i] += 1
         end
-        pop_i = [g for g in pop if length(g) == size_niche[i]]
+        pop_i = [g for g in pop if length(g) == lengths[i]]
 
         if isempty(pop_i)
             @debug "select: Empty niche at length $len"
