@@ -244,7 +244,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
 
     # Initialize elitist logging.
     best::EvaluatedGenotype = pop[fittest_idx(pop)]
-    len_best::Int = length(best)
+    length_best_prev::Int = length(best)
 
     # Bias factor for ryerkerk2020's biased window mechanism.
     bias_window::Float64 = 0
@@ -261,7 +261,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
     for outer iter in 1:(config.n_iter)
         if verbosity > 0
             @info "Starting iteration $iter/$(config.n_iter) …"
-            @info "Current best individual has length $len_best and " *
+            @info "Current best individual has length $(length(best)) and " *
                   "$(config.fiteval) fitness $(best.fitness)."
         end
 
@@ -333,16 +333,22 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
 
         # Update elitist.
         best_pop = pop_all[fittest_idx(pop_all)]
-        if best_pop.fitness >= best.fitness && length(best_pop) <= length(best)
-            best = best_pop
-            len_best = length(best)
+        # Always update if higher fitness. In case of equal fitness, only update
+        # if length isn't worse.
+        if (best_pop.fitness > best.fitness) || (
+            best_pop.fitness == best.fitness &&
+            length(best_pop) <= length(best)
+        )
+            length_best_prev = length(best)
+            # Not 100% sure whether we need deepcopy here.
+            best = deepcopy(best_pop)
         end
 
         # We perform selection after updating the elitist because we want to use
-        # the most recent `len_best`.
+        # the most recent `length(best)`.
         # TODO Only compute this if lengthniching is actually used
         len_lbound, len_ubound = biasedwindow_bounds(
-            len_best,
+            length(best),
             config.select_width_window,
             bias_window,
             config.size_pop,
@@ -352,7 +358,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         selection, report = if config.select == :lengthniching
             if verbosity > 0
                 @info "Selection window is " *
-                      "[$len_lbound, ($len_best), $len_ubound]. " *
+                      "[$len_lbound, ($length(best)), $len_ubound]. " *
                       "Window bias is approximately " *
                       "$(round(bias_window; digits=2))."
             end
@@ -362,7 +368,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
                 pop_all,
                 config.size_pop,
                 collect(len_lbound:len_ubound),
-                len_best,
+                length(best),
             )
         elseif config.select == :tournament
             select_trnmt(
@@ -380,6 +386,8 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         end
         pop[:] = selection
 
+        @assert all(best.fitness .>= getproperty.(pop, :fitness))
+
         # Log convergence metrics.
         log_fitness_best[iter] = best.fitness
         log_fitness[:, iter] .= getproperty.(pop, :fitness)
@@ -390,11 +398,9 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
 
         # TODO Only compute this if lengthniching is actually used
         # Update selection length niche.
-        len_best_prev = len_best
-        len_best = length(best)
         # (3) in ryerkerk2020.
         bias_window =
-            len_best - len_best_prev +
+            length(best) - length_best_prev +
             bias_window *
             exp(-config.select_lambda_window * sqrt(abs(bias_window)))
 
