@@ -253,6 +253,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
     log_fitness_best = Vector{Float64}(undef, config.n_iter)
     log_fitness = Array{Float64}(undef, config.size_pop, config.n_iter)
     log_length = Array{Float64}(undef, config.size_pop, config.n_iter)
+    log_n_duplicate_solutions = Vector{Float64}(undef, config.n_iter)
     log_select_bias = Vector{Float64}(undef, config.n_iter)
     log_select_len_lbound = Vector{Float64}(undef, config.n_iter)
     log_select_len_ubound = Vector{Float64}(undef, config.n_iter)
@@ -388,10 +389,20 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
 
         @assert all(best.fitness .>= getproperty.(pop, :fitness))
 
+        # Check for duplicate solutions in population.
+        pairs_idx_equal = []
+        pairs_idx = combinations(eachindex(pop), 2)
+        for (i1, i2) in pairs_idx
+            if pop[i1] == pop[i2]
+                push!(pairs_idx_equal, (i1, i2))
+            end
+        end
+
         # Log convergence metrics.
         log_fitness_best[iter] = best.fitness
         log_fitness[:, iter] .= getproperty.(pop, :fitness)
         log_length[:, iter] .= length.(pop)
+        log_n_duplicate_solutions[iter] = length(pairs_idx_equal)
         log_select_bias[iter] = bias_window
         log_select_len_lbound[iter] = len_lbound
         log_select_len_ubound[iter] = len_ubound
@@ -422,6 +433,7 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
         log_fitness_best=log_fitness_best[1:iter],
         log_fitness=log_fitness[:, 1:iter],
         log_length=log_length[:, 1:iter],
+        log_n_duplicate_solutions=log_n_duplicate_solutions[1:iter],
         log_select_bias=log_select_bias[1:iter],
         log_select_len_lbound=log_select_len_lbound[1:iter],
         log_select_len_ubound=log_select_len_ubound[1:iter],

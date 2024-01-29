@@ -1,6 +1,7 @@
 module GARegressors
 
 using AutoHashEquals
+using Combinatorics
 using DataFrames
 using Distributions
 using LinearAlgebra
