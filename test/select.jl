@@ -82,12 +82,14 @@ let
                 )
             for n_select in 1:size_pop
                 for len_l in 1:(maximum(length.(pop)) + 1)
-                    for len_u in len_l:(maximum(length.(pop)) + 1)
+                    for len_u in len_l:(len_l + n_select - 1)
                         selection, _ = GARegressors.select(
                             rng,
                             pop,
                             n_select,
                             collect(len_l:len_u),
+                            # len_best
+                            4,
                         )
                         # Selection size is as requested.
                         @test length(selection) == n_select

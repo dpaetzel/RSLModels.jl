@@ -1,5 +1,9 @@
 """
 Length niching selection operator proposed by ryerkerk2020.
+
+Note that it is assumed that `n_select <= length(lengths)` (otherwise
+`size_niche[i] == 0` for some niche and this results in an `Inf` somewhere down
+the line).
 """
 function select(
     rng::AbstractRNG,
@@ -215,7 +219,7 @@ function select_trnmt_niche(
 end
 
 # trnmt_plan(Random.default_rng(), collect(1:11), 11; fitness=identity)
-select_trnmt_niche(Random.default_rng(), collect(1:11), 11; fitness=identity)
+# select_trnmt_niche(Random.default_rng(), collect(1:11), 11; fitness=identity)
 
 """
 Tournament selection operator based on a user-provided tournament size.
