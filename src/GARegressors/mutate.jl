@@ -17,12 +17,9 @@ function mutate(
     rate_std::Float64,
     p_add::Float64,
     p_rm::Float64,
-    spread_min::Float64,
-    spread_max::Float64,
-    params_spread_a::Float64,
-    params_spread_b::Float64,
     x_min::Float64,
     x_max::Float64,
+    nmatch_min::Int,
 )
     return mutate(
         Random.default_rng(),
@@ -32,12 +29,9 @@ function mutate(
         rate_std,
         p_add,
         p_rm,
-        spread_min,
-        spread_max,
-        params_spread_a,
-        params_spread_b,
         x_min,
         x_max,
+        nmatch_min,
     )
 end
 
@@ -49,12 +43,9 @@ function mutate(
     rate_std::Float64,
     p_add::Float64,
     p_rm::Float64,
-    spread_min::Float64,
-    spread_max::Float64,
-    params_spread_a::Float64,
-    params_spread_b::Float64,
     x_min::Float64,
     x_max::Float64,
+    nmatch_min::Int,
 )
     # TODO Consider whether to add/rm first (so we don't waste bound mutation on
     # conditions that are removed a few lines later anyway). Note, however, that
@@ -80,27 +71,39 @@ function mutate(
         # We need to normalize the weights next.
         weights /= sum(weights)
 
-        # TODO Consider to enforce matching a configurable number of data points
-        # Draw a random data point that is then ensured to be matched by the new
-        # condition.
+        # We want the new condition to match `nmatch_min + 2` many data points.
+        # The `+ 2` is a design decision: We don't want the repair operator to
+        # immediately remove the rule again and therefore want to match two data
+        # points more than strictly necessary.
+        #
+        # Draw a single point.
         idx = sample(rng, 1:N, ProbabilityWeights(weights))
         x = X[idx, :]
+        distances = norm.(eachrow(x' .- X))
+        # `PartialQuickSort` receives an index (or a range of indices) for which
+        # it then computes the values lying there in a hypothetical sorted
+        # array. I.e. performs just enough of quick sort to be sure what would
+        # be at these indexes in the sorted array.
+        idx =
+            sortperm(distances; alg=PartialQuickSort(1:(nmatch_min + 2)))[1:(nmatch_min + 2)]
+        x = X[idx, :]
 
-        condition = draw_interval(
-            rng,
-            x;
-            spread_min=spread_min,
-            spread_max=spread_max,
-            params_spread=(a=params_spread_a, b=params_spread_b),
-            x_min=x_min,
-            x_max=x_max,
+        # Compute the minimum interval containing the points.
+        condition = Interval(
+            vec(minimum(x; dims=1)),
+            vec(maximum(x; dims=1));
+            lopen=falses(DX),
+            uopen=falses(DX),
         )
+
+        # TODO Make this a test
+        @assert all(elemof(x, condition))
 
         push!(g_, condition)
     end
 
-    # Remove a metavariable if it leaves at least one.
-    if length(g_) > 1 && rand(rng) < p_rm
+    # Remove a metavariable if it leaves at least `nmatch_min`.
+    if length(g_) > nmatch_min && rand(rng) < p_rm
         idx = rand(rng, eachindex(g_))
         deleteat!(g_, idx)
     end

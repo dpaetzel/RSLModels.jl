@@ -36,7 +36,7 @@ function express(
     y::YType,
     x_min,
     x_max,
-    nmatch_min::Int,
+    nmatch_min,
 )
     # TODO Consider to cache matching
     N, DX = size(X)
@@ -46,22 +46,16 @@ function express(
 
     M = Matrix{Bool}(undef, N, K)
     dists_out = []
-    idx_rm = []
     for idx in eachindex(conditions)
+        # TODO Cache matching matrix
         M[:, idx] .= elemof(X, conditions[idx])
         y_matched = view(y, M[:, idx])
-        # TODO Expose this parameter as match_min or something like that
-        # TODO Disable this test if `repair` is used
-        # If too few training data points are matched, ignore the condition.
-        if length(y_matched) < nmatch_min
-            push!(idx_rm, idx)
-        else
-            dist_out = fit_mle(Normal, y_matched)
-            push!(dists_out, dist_out)
-        end
+        # Note that because of the repair operator deleting rules that match
+        # less than `nmatch_min` training data points we can be sure that:
+        @assert length(y_matched) >= nmatch_min
+        dist_out = fit_mle(Normal, y_matched)
+        push!(dists_out, dist_out)
     end
-    # Delete conditions that do not match enough training data points.
-    deleteat!(conditions, idx_rm)
 
     # Inverse variance–based mixing (see drugowitsch2008b).
     vars = var.(dists_out)
@@ -229,7 +223,8 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
     # Initialize pop, repair it, and then eval it.
     pop_uneval::Vector{Genotype}, report =
         init(rng, X, init1, config.size_pop; verbosity=verbosity - 1)
-    pop_uneval[:], reports = unzip(repair.(Ref(rng), pop_uneval, Ref(X)))
+    pop_uneval[:], reports =
+        unzip(repair.(Ref(rng), pop_uneval, Ref(X), config.nmatch_min))
     pop::Vector{EvaluatedGenotype} =
         evaluate.(
             pop_uneval,
@@ -289,12 +284,9 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
                 config.mutate_rate_std,
                 config.mutate_p_add,
                 config.mutate_p_rm,
-                config.init_spread_min,
-                config.init_spread_max,
-                config.init_params_spread_a,
-                config.init_params_spread_b,
                 config.x_min,
                 config.x_max,
+                config.nmatch_min,
             )
             g2, report = mutate(
                 rng,
@@ -304,16 +296,13 @@ function runga(X::XType, y::YType, config::GARegressor; verbosity::Int=0)
                 config.mutate_rate_std,
                 config.mutate_p_add,
                 config.mutate_p_rm,
-                config.init_spread_min,
-                config.init_spread_max,
-                config.init_params_spread_a,
-                config.init_params_spread_b,
                 config.x_min,
                 config.x_max,
+                config.nmatch_min,
             )
 
-            g1, report = repair(rng, g1, X)
-            g2, report = repair(rng, g2, X)
+            g1, report = repair(rng, g1, X, config.nmatch_min)
+            g2, report = repair(rng, g2, X, config.nmatch_min)
 
             push!(offspring_uneval, g1)
             push!(offspring_uneval, g2)
