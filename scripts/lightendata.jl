@@ -1,15 +1,19 @@
 using DataFrames
 using Dates
+using RSLModels.Utils
 using StatsBase
 
 # Reduce the number of data sets considered even further.
 
 DXs = [3, 5, 8]
-Ks = [2, 4, 12]
+Ks = [2, 4, 8, 12]
 rate_coverage_min = 0.9
-n_per_d_k_coverage = 2
+n_per_d_k_coverage = 6
 
-dname_stats = "../2024-gecco-tasks/2024-01-19T16-28-51.924-task-selection"
+@info "Trying to select $(length(DXs) * length(Ks) * n_per_d_k_coverage) " *
+      "datasets"
+
+dname_stats = "../2024-gecco-tasks/2024-01-30T17-13-03.527-task-selection"
 df_stats_orig = readstats(; prefix_fname=dname_stats)
 df = df_stats_orig
 
@@ -32,7 +36,7 @@ end
 
 df_fnames = combine(
     groupby(df, ["params.d", "stats.K"]),
-    "fname" => fname -> sampleupto(fname, 2),
+    "fname" => fname -> sampleupto(fname, n_per_d_k_coverage),
 )
 
 fnames_selected = reduce(vcat, df_fnames.fname_function)

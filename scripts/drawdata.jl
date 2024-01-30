@@ -19,7 +19,7 @@ using RSLModels.Utils
 using RSLModels.Plots
 
 # We aim at having this many learning tasks per combination of d, K and coverage bin.
-n_per_d_k_coverage = 4
+n_per_d_k_coverage = 6
 
 # fname_paramselect = "2024-01-09T16-54-46-439387-kdata.paramselect.csv"
 # dname_stats = "2024-01-09T16-54-46-439387-data"
