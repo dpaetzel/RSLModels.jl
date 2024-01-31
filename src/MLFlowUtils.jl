@@ -1,6 +1,7 @@
 module MLFlowUtils
 
 using Base64
+using CSV
 using DataFrames
 using Dates
 using MLFlowClient
@@ -15,6 +16,7 @@ export add_missing_keys!,
     getmlf,
     has_bounds,
     load_runs,
+    readcsvartifact,
     run_to_dict,
     runs_to_df,
     runtimes,
@@ -311,6 +313,34 @@ function DataFrames.flatten(dict::Dict, key_hierarchy::AbstractVector)
         end
     end
     return pairs_all
+end
+
+"""
+Given an artifact URI, tries to read the given CSV file from it using SSH and
+convert it to a `DataFrame`.
+"""
+function readcsvartifact(artifact_uri, fname)
+    # TODO Make SSH login configurable
+    fpath = "$artifact_uri/$fname"
+
+    # Check whether the file exist.
+    process = run(
+        `ssh c3d "test -f $fpath"`;
+        # stdout=Base.DevNull,
+        # stderr=Base.DevNull,
+        wait=true,
+    )
+
+    # Check the exit code of the process
+    if process.exitcode != 0
+        println("File does not exist on the remote server.")
+        return missing
+    else
+        io = open(`ssh c3d cat $fpath`)
+        df = DataFrame(CSV.File(io))
+        close(io)
+        return df
+    end
 end
 
 end
