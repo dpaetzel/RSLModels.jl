@@ -25,18 +25,16 @@ export add_missing_keys!,
 """
 Get MLflow client using authentication.
 """
-function getmlf()
+function getmlf(; url="http://localhost:5000")
     config = open("config.toml", "r") do file
         return TOML.parse(read(file, String))
     end
-
-    mlflow_url = "http://localhost:5000"
 
     username = config["database"]["user"]
     password = config["database"]["password"]
     encoded_credentials = base64encode("$username:$password")
     headers = Dict("Authorization" => "Basic $encoded_credentials")
-    return MLFlow(mlflow_url; headers=headers)
+    return MLFlow(url; headers=headers)
 end
 
 function killsubprocs(proc)
