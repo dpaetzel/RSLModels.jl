@@ -15,7 +15,7 @@ export add_missing_keys!,
     check,
     getmlf,
     has_bounds,
-    load_runs,
+    loadruns,
     readcsvartifact,
     run_to_dict,
     runs_to_df,
@@ -147,9 +147,9 @@ If given an experiment name and a URL, access the mlflow REST API at that URL
 the first form of this command so you don't need to care about running the
 `mlflow ui` server by hand) and load all runs of that experiment from there.
 """
-function load_runs end
+function loadruns end
 
-function load_runs(exp_name, dir::String)
+function loadruns(exp_name, dir::String)
     port = 33333
     println("Starting mlflow ui server …")
     out = Pipe()
@@ -186,7 +186,7 @@ function load_runs(exp_name, dir::String)
         println("mlflow ui up and running!")
     end
 
-    df = load_runs(exp_name; url="http://localhost:$port")
+    df = loadruns(exp_name; url="http://localhost:$port")
     println("Fixing artifact URIs.")
     df[:, "artifact_uri"] = replace.(df.artifact_uri, r"^.*/mlruns" => "$dir")
 
@@ -197,47 +197,36 @@ function load_runs(exp_name, dir::String)
     return df
 end
 
-function load_runs(exp_name; url="http://localhost:5000")
-    println("Loading experiments from $url …")
-    mlf = MLFlow(url)
-    exp = searchexperiments(mlf; filter="name = '$exp_name'")
-    @assert (length(exp) == 1) "Experiment not found or ambiguous, did you serve the right directory?"
-    expid = exp[1].experiment_id
-    println("Loading runs for experiment $expid from $url …")
-    runs = searchruns(mlf, expid; max_results=10000)
-    println("Finished loading runs for experiment $expid from $url.")
+function todatetime(mlflowtime)
+    return Dates.unix2datetime(round(mlflowtime / 1000)) +
+           Millisecond(mlflowtime % 1000) +
+           # TODO Consider to use TimeZones.jl
+           # Add my timezone.
+           Hour(2)
+end
 
+function loadruns(exp_name; url="http://localhost:5000", max_results=5000)
+    # TODO Consider to serialize-cache this as well (see the `jid` variant of
+    # `loadruns`)
+    @info "Searching for experiment $exp_name at $url …"
+    mlf = getmlf(; url=url)
+    mlfexp = getexperiment(mlf, exp_name)
+
+    @info "Loading runs for experiment \"$(mlfexp.name)\" from $url …"
+    runs = searchruns(mlf, mlfexp; max_results=max_results)
+    @info "Finished loading $(length(runs)) runs for experiment " *
+          "\"$(mlfexp.name)\" from $url."
+
+    @info "Converting mlflow data to Julia representations …"
     df = runs_to_df(runs)
-    df[!, "params.data.DX"] .= parse.(Int, df[:, "params.data.DX"])
-    df[!, "params.data.hash"] .= parse.(UInt, df[:, "params.data.hash"])
+    df[!, "start_time"] .= todatetime.(df.start_time)
+    df[!, "end_time"] .= passmissing(todatetime).(df.end_time)
 
-    # Add algorithm IDs for easier plotting.
-    algorithms = sort(unique(df[:, "params.algorithm"]))
-    algorithm_id = Dict(algorithms .=> 1:length(algorithms))
-    df[!, "params.algorithm_id"] = [
-        algorithm_id[algorithm_name] for
-        algorithm_name in df[:, "params.algorithm"]
-    ]
-
-    df[!, "start_time"] .=
-        Dates.unix2datetime.(round.(df.start_time / 1000)) .+
-        Millisecond.(df.start_time .% 1000) .+
-        # TODO Consider to use TimeZones.jl
-        # Add my timezone.
-        Hour(2)
-    df[!, "end_time"] .=
-        passmissing(
-            Dates.unix2datetime,
-        ).(passmissing(round).(df.end_time / 1000)) .+
-        passmissing(Millisecond).(df.end_time .% 1000) .+
-        # TODO Consider to use TimeZones.jl
-        # Add my timezone.
-        Hour(2)
-
+    @info "Adding helpful additional columns …"
     df[!, "duration"] = df.end_time .- df.start_time
-
     df[!, "duration_min"] =
         Missings.replace(df.end_time, now()) .- df.start_time
+
     return df
 end
 
