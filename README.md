@@ -195,4 +195,4 @@ import Pkg; Pkg.test(;test_args=["select", "ga"])
 ## Citing
 
 
-See [`CITATION.bib`](CITATION.bib) for the relevant reference(s).
+See [`CITATION.cff`](CITATION.cff).
