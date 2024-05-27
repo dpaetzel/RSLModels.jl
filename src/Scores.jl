@@ -1,7 +1,5 @@
 module Scores
 
-using PyPlot
-
 using ..Intervals
 
 export mappings,
