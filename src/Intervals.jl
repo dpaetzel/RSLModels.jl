@@ -25,25 +25,46 @@ export Interval,
     remove_fully_overlapped,
     volume
 
-const X_MIN::Float64 = 0.0
-const X_MAX::Float64 = 1.0
+# TODO Search all usages of this and replace with xmin(T)
+# Deprecated.
+const X_MIN::Float32 = 0.0
+const X_MAX::Float32 = 1.0
 
-@auto_hash_equals struct Interval
-    lbound::Vector{Float64}
-    ubound::Vector{Float64}
+function xmin(T)
+    return zero(T)
+end
+
+function xmax(T)
+    return one(T)
+end
+
+@auto_hash_equals struct Interval{T<:Number}
+    lbound::Vector{T}
+    ubound::Vector{T}
     lopen::BitVector
     uopen::BitVector
-    function Interval(
-        lbound::Vector{Float64},
-        ubound::Vector{Float64};
+    function Interval{T}(
+        lbound::Vector{T},
+        ubound::Vector{T};
         lopen::BitVector=falses(length(lbound)),
         uopen::BitVector=falses(length(ubound)),
-    )
+    ) where {T<:Number}
         # Note that open intervals are allowed to have lower and upper bounds be
         # the same (which results in an empty set).
         return any(lbound .> ubound) ? error("out of order") :
                new(lbound, ubound, lopen, uopen)
     end
+end
+
+# Define an outer constructor to infer the type parameter (i.e. to not have to
+# provide `{T}`).
+function Interval(
+    lbound::Vector{T},
+    ubound::Vector{T};
+    lopen::BitVector=falses(length(lbound)),
+    uopen::BitVector=falses(length(ubound)),
+) where {T<:Number}
+    return Interval{T}(lbound, ubound; lopen=lopen, uopen=uopen)
 end
 
 function Base.clamp(x::Interval, lo::Float64, hi::Float64)
@@ -180,17 +201,22 @@ function maxgeneral(dims::Integer; x_min=X_MIN, x_max=X_MAX)
     return Interval(repeat([x_min], dims), repeat([x_max], dims))
 end
 
+"""
+Draw a random spread. Return type is the type of the `spread_min` argument.
+"""
+function draw_spread end
+
 # NOTE Dimension should actually be unsigned but I don't see how to achieve that
 # cleanly right now (i.e. without having to do `unsigned(10)` or `0xa` or
 # similar).
 function draw_spread(
-    dims::Integer;
-    spread_min::Float64=0.0,
-    spread_max=Inf,
-    params::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
-    x_min=X_MIN,
-    x_max=X_MAX,
-)
+    dims;
+    spread_min::T=0.0f0,
+    spread_max::T=Inf32,
+    params::NamedTuple{(:a, :b),Tuple{T,T}}=(a=1.0f0, b=1.0f0),
+    x_min::T=xmin(T),
+    x_max::T=xmax(T),
+) where {T<:Number}
     return draw_spread(
         Random.default_rng(),
         dims;
@@ -204,13 +230,13 @@ end
 
 function draw_spread(
     rng::AbstractRNG,
-    dims::Integer;
-    spread_min::Float64=0.0,
-    spread_max=Inf,
-    params::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
-    x_min=X_MIN,
-    x_max=X_MAX,
-)
+    dims;
+    spread_min::T=0.0f0,
+    spread_max::T=Inf32,
+    params::NamedTuple{(:a, :b),Tuple{T,T}}=(a=1.0f0, b=1.0f0),
+    x_min::T=xmin(T),
+    x_max::T=xmax(T),
+) where {T<:Number}
     if spread_min > spread_max
         throw(
             ArgumentError(
@@ -220,6 +246,14 @@ function draw_spread(
     end
 
     rates_spread = rand(rng, Beta(params.a, params.b), dims)
+    # Distributions.jl does not support providing T yet in the way that I would
+    # expect. E.g.  https://github.com/JuliaStats/Distributions.jl/pull/1433 .
+    #
+    # TODO I'm not sure what the performance implications of `convert` are,
+    # possibly have to check that using profiling (I could also do the
+    # converting at the very end but then we may actually not match the provided
+    # data point any more due to rounding?).
+    rates_spread = convert.(T, rates_spread)
 
     spread_max = min((x_max - x_min) / 2, spread_max)
     return spread_min .+ rates_spread .* (spread_max - spread_min)
@@ -230,7 +264,7 @@ Given a data point `x` and a spread (and space boundaries), the lower bound of
 the range of viable interval centers such that the interval [center - spread,
 center + spread] does not violate the space constraints and contains `x`.
 """
-function lbound_center(x, spread; x_min=Intervals.X_MIN, x_max=Intervals.X_MAX)
+function lbound_center(x, spread; x_min, x_max)
     return max(x - spread, x_min + spread)
 end
 
@@ -239,11 +273,16 @@ Given a data point `x` and a spread (and space boundaries), the upper bound of
 the range of viable interval centers such that the interval [center - spread,
 center + spread] does not violate the space constraints and contains `x`.
 """
-function ubound_center(x, spread; x_min=Intervals.X_MIN, x_max=Intervals.X_MAX)
+function ubound_center(x, spread; x_min, x_max)
     return min(x + spread, x_max - spread)
 end
 
-function draw_center(x, spread; x_min=X_MIN, x_max=X_MAX)
+function draw_center(
+    x::T,
+    spread::T;
+    x_min::T=xmin(T),
+    x_max::T=xmax(T),
+) where {T<:Number}
     return draw_center(
         Random.default_rng(),
         x,
@@ -255,49 +294,46 @@ end
 
 function draw_center(
     rng::AbstractRNG,
-    x::Float64,
-    spread::Float64;
-    x_min=X_MIN,
-    x_max=X_MAX,
-)
+    x::T,
+    spread::T;
+    x_min::T=xmin(T),
+    x_max::T=xmax(T),
+) where {T<:Number}
     # The spread defines an interval around `x` from which we can draw a center
     # such that `x` is still matched.
     lb_center = lbound_center(x, spread; x_min=x_min, x_max=x_max)
     ub_center = ubound_center(x, spread; x_min=x_min, x_max=x_max)
 
     # We next draw a rate.
-    rate_center = rand(rng)
+    rate_center = rand(rng, T)
 
     # Then we convert this rate into a center.
     return lb_center + rate_center * (ub_center - lb_center)
 end
 
-# NOTE We cannot write `Vector{Real}` here because in Julia it does NOT follow
-# from `T1 <: T2` that `T{T1} <: T{T2}`. Instead, we write `Vector` for which we
-# have `Vector{T} <: Vector` for all `T`.
 function draw_center(
     rng::AbstractRNG,
-    x::AbstractVector{Float64},
-    spread::AbstractVector{Float64};
-    x_min=X_MIN,
-    x_max=X_MAX,
-)
+    x::AbstractVector{T},
+    spread::AbstractVector{T};
+    x_min::T=xmin(T),
+    x_max::T=xmax(T),
+) where {T<:Number}
     # Simply draw an independent spread for each dimension.
     return draw_center.(rng, x, spread; x_min=x_min, x_max=x_max)
 end
 
 function draw_interval(
-    x::AbstractVector{Float64};
-    spread_min::Float64=0.0,
-    spread_max=Inf,
-    params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
-    x_min=X_MIN,
-    x_max=X_MAX,
-)
+    x::AbstractVector{T};
+    spread_min::T=0.0f0,
+    spread_max::T=Inf32,
+    params_spread::NamedTuple{(:a, :b),Tuple{T,T}}=(a=1.0f0, b=1.0f0),
+    x_min::T=xmin(T),
+    x_max::T=xmax(T),
+) where {T<:Number}
     return draw_interval(
         Random.default_rng(),
         x;
-        spread_min,
+        spread_min=spread_min,
         spread_max=spread_max,
         params_spread=params_spread,
         x_min=x_min,
@@ -307,13 +343,13 @@ end
 
 function draw_interval(
     rng::AbstractRNG,
-    x::AbstractVector{Float64};
-    spread_min::Float64=0.0,
-    spread_max=Inf,
-    params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
-    x_min=X_MIN,
-    x_max=X_MAX,
-)
+    x::AbstractVector{T};
+    spread_min::T=0.0f0,
+    spread_max::T=Inf32,
+    params_spread::NamedTuple{(:a, :b),Tuple{T,T}}=(a=1.0f0, b=1.0f0),
+    x_min::T=xmin(T),
+    x_max::T=xmax(T),
+) where {T<:Number}
     dims = size(x, 1)
     spread = draw_spread(
         rng,
@@ -363,8 +399,8 @@ function draw_intervals(
     rate_coverage_min::Float64=0.8,
     n_samples::Int=n(dims),
     remove_final_fully_overlapped::Bool=true,
-    x_min::Float64=Intervals.X_MIN,
-    x_max::Float64=Intervals.X_MAX,
+    x_min=xmin(Float64),
+    x_max=xmax(Float64),
     usemmap::Bool=false,
     n_intervals_max::Int=1000,
     verbosity::Int=0,
@@ -395,8 +431,8 @@ function draw_intervals(
     rate_coverage_min::Float64=0.8,
     n_samples::Int=n(dims),
     remove_final_fully_overlapped::Bool=true,
-    x_min::Float64=Intervals.X_MIN,
-    x_max::Float64=Intervals.X_MAX,
+    x_min=xmin(Float64),
+    x_max=xmax(Float64),
     usemmap::Bool=false,
     n_intervals_max::Int=1000,
     verbosity::Int=0,
@@ -457,8 +493,8 @@ function draw_intervals(
     params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
     rate_coverage_min::Float64=0.8,
     remove_final_fully_overlapped::Bool=true,
-    x_min::Float64=Intervals.X_MIN,
-    x_max::Float64=Intervals.X_MAX,
+    x_min=xmin(Float64),
+    x_max=xmax(Float64),
     n_intervals_max::Int=1000,
     verbosity::Int=0,
 )
@@ -485,8 +521,8 @@ function draw_intervals(
     params_spread::NamedTuple{(:a, :b),Tuple{Float64,Float64}}=(a=1.0, b=1.0),
     rate_coverage_min::Float64=0.8,
     remove_final_fully_overlapped::Bool=true,
-    x_min::Float64=Intervals.X_MIN,
-    x_max::Float64=Intervals.X_MAX,
+    x_min=xmin(Float64),
+    x_max=xmax(Float64),
     n_intervals_max::Int=1000,
     verbosity::Int=0,
 )
@@ -612,8 +648,8 @@ function spread_ideal_cubes(
     dims::Integer,
     n_intervals;
     factor=1.0,
-    x_min=X_MIN,
-    x_max=X_MAX,
+    x_min=xmin(Float64),
+    x_max=xmax(Float64),
 )
     volume_avg = factor * (x_max - x_min)^dims / n_intervals
     return volume_avg^(1.0 / dims) / 2.0
@@ -628,8 +664,8 @@ function volume_min_factor(
     dims::Integer,
     n_intervals,
     factor=0.1;
-    x_min=X_MIN,
-    x_max=X_MAX,
+    x_min=xmin(Float64),
+    x_max=xmax(Float64),
 )
     volume_input_space = (x_max - x_min)^dims
     return factor * volume_input_space / n_intervals
@@ -700,18 +736,23 @@ end
 Uses the default RNG to mutate the lower and upper bounds of the given interval
 at random (see code).
 """
-function mutate(interval::Interval; factor=0.1, x_min=X_MIN, x_max=X_MAX)
+function mutate(
+    interval::Interval;
+    factor=0.1,
+    x_min=xmin(Float64),
+    x_max=xmax(Float64),
+)
     lbound, ubound = interval.lbound, interval.ubound
     lbound_new =
         lbound .+
-        (rand(size(lbound, 1)) .* factor .- factor) .* (X_MAX - X_MIN)
+        (rand(size(lbound, 1)) .* factor .- factor) .* (x_max - x_min)
     ubound_new =
         ubound .+
-        (rand(size(ubound, 1)) .* factor .- factor) .* (X_MAX - X_MIN)
+        (rand(size(ubound, 1)) .* factor .- factor) .* (x_max - x_min)
     lbound_new = min.(lbound_new, ubound_new)
     ubound_new = max.(lbound_new, ubound_new)
-    lbound_new = clamp.(lbound_new, X_MIN, X_MAX)
-    ubound_new = clamp.(ubound_new, X_MIN, X_MAX)
+    lbound_new = clamp.(lbound_new, x_min, x_max)
+    ubound_new = clamp.(ubound_new, x_min, x_max)
     return Interval(
         lbound_new,
         ubound_new;
@@ -728,8 +769,8 @@ function mutate(
     intervals::AbstractVector{Interval},
     n::Integer;
     factor=0.1,
-    x_min=X_MIN,
-    x_max=X_MAX,
+    x_min=xmin(Float64),
+    x_max=xmax(Float64),
 )
     intervals_changed = deepcopy(intervals)
     idx = sample(1:size(intervals_changed, 1), n; replace=false)
@@ -745,8 +786,8 @@ function mutate(
     intervals::AbstractVector{Interval},
     indices::AbstractVector;
     factor=0.1,
-    x_min=X_MIN,
-    x_max=X_MAX,
+    x_min=xmin(Float64),
+    x_max=xmax(Float64),
 )
     intervals_changed = deepcopy(intervals)
     idx = indices
